@@ -1,0 +1,383 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  renter
+  host
+  admin
+}
+
+enum HealthcareRole {
+  medical_student
+  nursing_student
+  nurse
+  resident_physician
+  physician
+  other
+}
+
+enum VerificationStatus {
+  not_started
+  pending
+  approved
+  rejected
+  expired
+}
+
+enum AiReviewStatus {
+  not_started
+  processing
+  completed
+  failed
+}
+
+enum AiRecommendation {
+  approve
+  reject
+  needs_manual_review
+}
+
+enum ListingStatus {
+  draft
+  pending
+  approved
+  rejected
+  hidden
+  archived
+}
+
+enum PriceUnit {
+  day
+  night
+  month
+}
+
+enum ListingType {
+  private_room
+  entire_home
+  shared_room
+}
+
+enum StayDuration {
+  short_term
+  medium_term
+  long_term
+}
+
+enum ProximityTag {
+  near_hospitals
+  public_transit
+}
+
+enum SpecialFeature {
+  fully_furnished
+  pet_friendly
+  access_24_7
+}
+
+enum AvailabilityStatus {
+  available
+  blocked
+}
+
+enum ListingPlaceType {
+  neighborhood_perk
+  local_recommendation
+}
+
+enum InquiryStatus {
+  open
+  closed
+  archived
+}
+
+enum BookingStatus {
+  requested
+  accepted
+  rejected
+  cancelled
+  payment_pending
+  paid
+  completed
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  refunded
+  disputed
+}
+
+enum AdminTargetType {
+  listing
+  verification
+  user
+}
+
+enum AdminActionType {
+  approve
+  reject
+  hide
+  disable_user
+}
+
+model User {
+  id                        String                   @id @default(uuid())
+  supabaseUserId            String                   @unique
+  email                     String                   @unique
+  emailVerifiedAt           DateTime?
+  firstName                 String?
+  lastName                  String?
+  displayName               String?
+  healthcareRole            HealthcareRole?
+  roles                     UserRole[]               @default([])
+  healthcareAffiliation     String?
+  phoneNumber               String?
+  bio                       String?
+  profilePhotoUrl           String?
+  profileComplete           Boolean                  @default(false)
+  currentVerificationStatus VerificationStatus       @default(not_started)
+  disabledAt                DateTime?
+  createdAt                 DateTime                 @default(now())
+  updatedAt                 DateTime                 @updatedAt
+
+  healthcareVerifications   HealthcareVerification[] @relation("UserVerifications")
+  reviewedVerifications     HealthcareVerification[] @relation("AdminReviewedVerifications")
+  listings                  Listing[]
+  renterInquiries           Inquiry[]                @relation("RenterInquiries")
+  hostInquiries             Inquiry[]                @relation("HostInquiries")
+  messages                  Message[]
+  renterBookings            Booking[]                @relation("RenterBookings")
+  hostBookings              Booking[]                @relation("HostBookings")
+  reviews                   Review[]
+  adminActions              AdminAction[]
+
+  @@index([supabaseUserId])
+  @@index([email])
+}
+
+model HealthcareVerification {
+  id                 String             @id @default(uuid())
+  userId             String
+  veriffSessionId    String?            @unique
+  veriffStatus       String?
+  status             VerificationStatus @default(not_started)
+  aiReviewStatus     AiReviewStatus     @default(not_started)
+  aiRecommendation   AiRecommendation?
+  aiConfidence       Decimal?           @db.Decimal(4, 3)
+  aiReason           String?
+  aiReviewedAt       DateTime?
+  reviewedByAdminId  String?
+  adminReviewNote    String?
+  submittedAt        DateTime?
+  reviewedAt         DateTime?
+  expiresAt          DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  user               User               @relation("UserVerifications", fields: [userId], references: [id])
+  reviewedByAdmin    User?              @relation("AdminReviewedVerifications", fields: [reviewedByAdminId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Listing {
+  id                String                @id @default(uuid())
+  hostId            String
+  title             String
+  description       String
+  city              String
+  address           String?
+  latitude          Decimal?              @db.Decimal(10, 7)
+  longitude         Decimal?              @db.Decimal(10, 7)
+  priceCents        Int
+  currency          String                @default("USD")
+  priceUnit         PriceUnit
+  listingType       ListingType
+  category          String?
+  status            ListingStatus         @default(pending)
+  stayDurations     StayDuration[]        @default([])
+  proximityTags     ProximityTag[]        @default([])
+  specialFeatures   SpecialFeature[]      @default([])
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  deletedAt         DateTime?
+
+  host              User                  @relation(fields: [hostId], references: [id])
+  photos            ListingPhoto[]
+  availability      ListingAvailability[]
+  places            ListingPlace[]
+  inquiries         Inquiry[]
+  bookings          Booking[]
+  reviews           Review[]
+
+  @@index([hostId])
+  @@index([city])
+  @@index([status])
+}
+
+model ListingPhoto {
+  id           String   @id @default(uuid())
+  listingId    String
+  storagePath  String
+  fileUrl      String
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  listing      Listing  @relation(fields: [listingId], references: [id])
+
+  @@unique([listingId, displayOrder])
+  @@index([listingId])
+}
+
+model ListingAvailability {
+  id        String             @id @default(uuid())
+  listingId String
+  startDate DateTime
+  endDate   DateTime
+  status    AvailabilityStatus
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  listing   Listing            @relation(fields: [listingId], references: [id])
+
+  @@index([listingId])
+  @@index([startDate, endDate])
+}
+
+model ListingPlace {
+  id            String           @id @default(uuid())
+  listingId     String
+  type          ListingPlaceType
+  label         String
+  googlePlaceId String?
+  mapsUrl       String?
+  displayOrder  Int              @default(0)
+  createdAt     DateTime         @default(now())
+
+  listing       Listing          @relation(fields: [listingId], references: [id])
+
+  @@index([listingId])
+}
+
+model Inquiry {
+  id        String        @id @default(uuid())
+  listingId String
+  renterId  String
+  hostId    String
+  status    InquiryStatus @default(open)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  closedAt  DateTime?
+
+  listing   Listing       @relation(fields: [listingId], references: [id])
+  renter    User          @relation("RenterInquiries", fields: [renterId], references: [id])
+  host      User          @relation("HostInquiries", fields: [hostId], references: [id])
+  messages  Message[]
+
+  @@index([listingId])
+  @@index([renterId])
+  @@index([hostId])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  inquiryId String
+  senderId  String
+  body      String
+  createdAt DateTime @default(now())
+  readAt    DateTime?
+
+  inquiry   Inquiry  @relation(fields: [inquiryId], references: [id])
+  sender    User     @relation(fields: [senderId], references: [id])
+
+  @@index([inquiryId])
+  @@index([senderId])
+}
+
+model Booking {
+  id                 String        @id @default(uuid())
+  listingId          String
+  renterId           String
+  hostId             String
+  startDate          DateTime
+  endDate            DateTime
+  selectedOption     String
+  additionalRequests String?
+  status             BookingStatus @default(requested)
+  totalAmountCents   Int
+  currency           String        @default("USD")
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  cancelledAt        DateTime?
+
+  listing            Listing       @relation(fields: [listingId], references: [id])
+  renter             User          @relation("RenterBookings", fields: [renterId], references: [id])
+  host               User          @relation("HostBookings", fields: [hostId], references: [id])
+  payments           Payment[]
+  review             Review?
+
+  @@index([listingId])
+  @@index([renterId])
+  @@index([hostId])
+  @@index([startDate, endDate])
+}
+
+model Payment {
+  id                        String        @id @default(uuid())
+  bookingId                 String
+  provider                  String        @default("stripe")
+  providerCheckoutSessionId String?       @unique
+  providerPaymentIntentId   String?       @unique
+  amountCents               Int
+  currency                  String        @default("USD")
+  status                    PaymentStatus @default(pending)
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
+  paidAt                    DateTime?
+  refundedAt                DateTime?
+
+  booking                   Booking       @relation(fields: [bookingId], references: [id])
+
+  @@index([bookingId])
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  listingId  String
+  bookingId  String   @unique
+  reviewerId String
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  listing    Listing  @relation(fields: [listingId], references: [id])
+  booking    Booking  @relation(fields: [bookingId], references: [id])
+  reviewer   User     @relation(fields: [reviewerId], references: [id])
+
+  @@index([listingId])
+  @@index([reviewerId])
+}
+
+model AdminAction {
+  id         String          @id @default(uuid())
+  adminId    String
+  targetType AdminTargetType
+  targetId   String
+  action     AdminActionType
+  note       String?
+  createdAt  DateTime        @default(now())
+
+  admin      User            @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([targetType, targetId])
+}

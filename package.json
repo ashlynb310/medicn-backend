@@ -1,0 +1,37 @@
+{
+  "name": "medicn-backend-fullstack",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "npm@11.17.0",
+  "engines": {
+    "node": ">=24.16.0 <25",
+    "npm": ">=11.17.0 <12"
+  },
+  "workspaces": [
+    "apps/api",
+    "packages/types"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/api",
+    "dev:api": "npm run dev -w apps/api",
+    "build": "npm run build:types && npm run build:api",
+    "build:api": "npm run build -w apps/api",
+    "build:types": "npm run build -w packages/types",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f db",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "dotenv": "17.4.2",
+    "prisma": "7.8.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.61.1"
+  }
+}

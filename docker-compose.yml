@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:18.4-alpine
+    container_name: medicn-postgres
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-medicn}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medicn_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-medicn_dev}
+    volumes:
+      - medicn_postgres_18_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-medicn} -d ${POSTGRES_DB:-medicn_dev}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  medicn_postgres_18_data:

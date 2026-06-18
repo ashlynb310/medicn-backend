@@ -112,3 +112,35 @@ Significant technical decisions should include:
 - why it was chosen
 - alternatives considered
 - expected tradeoffs
+
+
+## What's Been Done
+- Implemented backend authentication integration with Supabase access tokens(Currently using Supabase as auth provider for testing, will switch if decide otherwise)
+- Added listing CRUD endpoints
+- Added Prisma schema and migrations for backend data models
+- Added backend listing search with filters, sorting, and pagination
+
+## Environment List
+| Tool / Dependency | Version |
+| --- | --- |
+| Node.js | v24.16.0 |
+| npm | 11.17.0 |
+| Docker Engine | 29.2.1 |
+| Docker Compose | v5.1.0 |
+| PostgreSQL | `postgres:18.4-alpine` Docker image |
+| Local `psql` CLI | Not installed / not required |
+| NestJS | 11.1.27 |
+| Prisma | 7.8.0 |
+| Supabase JS SDK | 2.108.2 |
+| TypeScript | 6.0.3 |
+| Jest | 30.4.2 |
+| ESLint | 10.5.0 |
+
+Run:
+
+```bash
+npm install
+npm run db:up
+npm run prisma:generate
+npm run prisma:migrate
+npm run dev:api

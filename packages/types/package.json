@@ -1,0 +1,16 @@
+{
+  "name": "@medicn/types",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "echo \"No tests for @medicn/types yet\""
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "name": "@medicn/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start": "node dist/main.js",
+    "test": "jest",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\""
+  },
+  "dependencies": {
+    "@medicn/types": "file:../../packages/types",
+    "@nestjs/common": "11.1.27",
+    "@nestjs/config": "4.0.4",
+    "@nestjs/core": "11.1.27",
+    "@nestjs/platform-express": "11.1.27",
+    "@prisma/adapter-pg": "7.8.0",
+    "@prisma/client": "7.8.0",
+    "@supabase/supabase-js": "2.108.2",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.15.1",
+    "helmet": "8.2.0",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "11.0.23",
+    "@nestjs/schematics": "11.1.0",
+    "@nestjs/testing": "11.1.27",
+    "@types/jest": "30.0.0",
+    "@types/node": "24.13.2",
+    "@typescript-eslint/eslint-plugin": "8.61.1",
+    "@typescript-eslint/parser": "8.61.1",
+    "eslint": "10.5.0",
+    "jest": "30.4.2",
+    "source-map-support": "0.5.21",
+    "ts-jest": "29.4.11",
+    "ts-loader": "9.6.0",
+    "ts-node": "10.9.2",
+    "typescript": "6.0.3"
+  }
+}

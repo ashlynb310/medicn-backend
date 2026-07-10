@@ -25,7 +25,7 @@ export default function CityCarousel() {
 
   // Unified click handler for both the image card and the text links
   const handleLocationSearch = (cityName: string) => {
-    router.push(`/search?q=${encodeURIComponent(cityName)}`);
+    router.push(`/search?location=${encodeURIComponent(cityName)}`);
   };
 
   return (

@@ -5,17 +5,17 @@ export default function Footer() {
     const columnOneLinks = [
         { label: 'About Us', href: '/about'},
         { label: 'Search Listings', href: '/search'},
-        { label: 'Post A New Listing', href: '/post'},
+        { label: 'Post A New Listing', href: '/host/listings/new'},
         { label: 'How It Works', href: '/how-it-works'},
-        { label: 'Trust & Safety', href: 'trust-and-safety'}
+        { label: 'Trust & Safety', href: '/trust-and-safety'}
     ];
 
     const columnTwoLinks = [
         { label: 'Our Blog | Between Rotations', href: '/blog'},
         { label: 'FAQ', href: '/faq'},
-        { label: 'Terms of Service', href: 'terms-of-service'},
-        { label: 'Privacy Policy', href: 'privacy-policy'},
-        { label: 'Contact Us', href: 'contact-us'}
+        { label: 'Terms of Service', href: '/terms-of-service'},
+        { label: 'Privacy Policy', href: '/privacy-policy'},
+        { label: 'Contact Us', href: '/contact-us'}
     ];
 
     return (

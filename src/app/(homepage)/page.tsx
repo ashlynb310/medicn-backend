@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button'; //Import shadcn/ui button
 import { useRouter } from 'next/navigation';
 import CityCarousel from '@/components/city-carousel';
+import FeaturedListings from '@/components/featured-listings';
 import SearchInput from '@/components/search-input';
 
 export default function Home() {
@@ -15,7 +16,7 @@ export default function Home() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const query = formData.get('searchQuery');
-    if (query) router.push(`/search?q=${encodeURIComponent(query.toString())}`);
+    if (query) router.push(`/search?location=${encodeURIComponent(query.toString())}`);
   };
 
   return (
@@ -75,61 +76,12 @@ export default function Home() {
           </h1>
         </div>
 
-        {/* Column 1 */}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl">
-          <div className="flex flex-col gap-4 group">
-            <div className="relative h-80 w-full rounded-2xl overflow-hidden shadow-lg border border-white/10">
-              {/* An image of a listing */}
-              <Image
-                src="/400x400_Placeholder_Image.png"
-                alt="Placeholder Image for Featured Listing Example"
-                fill
-                sizes="(max-w-768px) 100vw, 50vw"
-                className="object-cover transition-transform duration-500 group-hover:scale-103"
-                />
-            </div>
-
-            {/* Captions for column 1 image */}
-            <div className="px-2">
-              <p className="text-xl font-semibold tracking-wider uppercase text-white">
-                LISTING EXAMPLE
-              </p>
-              <p className="text-lg mt-1 font-medium text-white">
-                Listing Your Property: Listing Description
-              </p>
-            </div>
-          </div>
-
-          {/* Column 2 */}
-
-          <div className="flex flex-col gap-4 group">
-            <div className="relative h-80 w-full rounded-2xl overflow-hidden shadow-lg border border-white/10">
-              {/* Image showing conversation between host and renter */}
-              <Image
-                src="/400x400_Placeholder_Image.png"
-                alt="Placeholder Image for Conversation Between Host and Renter"
-                fill
-                sizes="(max-w-768px) 100vw, 50vw"
-                className="object-cover transition-transform duration-500 group-hover:scale-103"
-                />
-            </div>
-
-            {/* Caption for column 2 */}
-            <div className="px-2">
-              <p className="text-xl font-semibold tracking-wider uppercase text-white">
-                COMMUNICATION BETWEEN HOST AND RENTER EXAMPLE
-              </p>
-              <p className="text-lg mt-1 font-medium text-white">
-              Connect with verified healthcare professionals.
-              </p>
-            </div>
-          </div>
-        </div>
+        {/* Latest approved listings loaded from the backend API */}
+        <FeaturedListings />
 
         <div className="mt-16 text-center">
           <Button
-            onClick={() => router.push('/post')}
+            onClick={() => router.push('/host/listings/new')}
             className="bg-[#0a2c58] hover:bg-slate-100 text-white font-bold px-8 py-6 rounded-xl text-md shadow-xl transition-all hover:shadow-2xl">
             List Your Property
           </Button>
@@ -146,7 +98,7 @@ export default function Home() {
               Why The MediCN Is Different
             </h1>
             <p className="text-lg text-slate-900">
-              Finding the right place to stay shouldn't add stress to your journey in healthcare.
+              Finding the right place to stay should not add stress to your journey in healthcare.
               The MediCN was created with medical students and professionals in mind, offering trusted
               housing solutions that make every rotation, residency, and assignment feel a little more like home.
             </p>
@@ -159,7 +111,7 @@ export default function Home() {
               </h2>
               <p className="text-slate-900 leading-relaxed">
                The MediCN is tailored to medical workers and students who need flexible,
-               short-term stays close to work, whether you're on rotation, assignment, or residency.
+               short-term stays close to work, whether you are on rotation, assignment, or residency.
               </p>
             </div>
 
@@ -168,7 +120,7 @@ export default function Home() {
                 A Trusted Community
               </h2>
               <p className="text-slate-900 leading-relaxed">
-                The MediCN is more than a housing platform—it's a network of trusted hosts who are committed to offering safe and comfortable homes.
+                The MediCN is more than a housing platform; it is a network of trusted hosts who are committed to offering safe and comfortable homes.
                 Each listing is verified, and our hosts are selected based on their commitment to providing a supportive environment.
               </p>
             </div>

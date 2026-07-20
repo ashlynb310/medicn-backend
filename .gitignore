@@ -1,0 +1,23 @@
+node_modules/
+dist/
+.next/
+coverage/
+.logs/
+
+.env
+.env.local
+.env.*.local
+
+*.log
+*.pem
+*.key
+*.tsbuildinfo
+
+.claude/
+.playwright-cli/
+.vscode/
+.idea/
+
+# Generated declarations/runtime files do not belong beside shared type source.
+packages/types/src/*.d.ts
+packages/types/src/*.js

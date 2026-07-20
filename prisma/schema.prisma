@@ -1,0 +1,1332 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  renter
+  host
+  admin
+}
+
+enum HealthcareRole {
+  medical_student
+  nursing_student
+  nurse
+  resident_physician
+  physician
+  other
+}
+
+enum HealthcareAffiliationType {
+  hospital
+  clinic
+  university
+  medical_school
+  nursing_school
+  other
+}
+
+enum HealthcareEvidenceCategory {
+  license
+  student
+  employment
+  other
+}
+
+enum HealthcareSubmissionStatus {
+  created
+  uploading
+  processing
+  pending_review
+  approved
+  rejected
+  withdrawn
+  processing_failed
+  deletion_pending
+  evidence_deleted
+  deletion_failed
+}
+
+enum HealthcareDecisionReasonCode {
+  information_confirmed
+  evidence_unreadable
+  information_mismatch
+  unsupported_evidence
+  other
+}
+
+enum VerificationStatus {
+  not_started
+  pending
+  approved
+  rejected
+  expired
+}
+
+enum IdentityProvider {
+  veriff
+}
+
+enum IdentityVerificationStatus {
+  not_started
+  created
+  submitted
+  review
+  resubmission_requested
+  approved
+  declined
+  expired
+  abandoned
+}
+
+enum IdentityWebhookKind {
+  event
+  decision
+}
+
+enum IdentityWebhookProcessingStatus {
+  received
+  processing
+  processed
+  failed
+  ignored
+}
+
+enum AiReviewStatus {
+  not_started
+  processing
+  completed
+  failed
+}
+
+enum AiRecommendation {
+  approve
+  reject
+  needs_manual_review
+}
+
+enum ListingStatus {
+  draft
+  pending
+  approved
+  rejected
+  hidden
+  archived
+}
+
+enum PriceUnit {
+  day
+  night
+  month
+}
+
+enum ListingType {
+  private_room
+  entire_home
+  shared_room
+}
+
+enum StayDuration {
+  short_term
+  medium_term
+  long_term
+}
+
+enum ProximityTag {
+  near_hospitals
+  public_transit
+}
+
+enum SpecialFeature {
+  fully_furnished
+  pet_friendly
+  access_24_7
+}
+
+enum AvailabilityStatus {
+  available
+  blocked
+}
+
+enum ListingPlaceType {
+  neighborhood_perk
+  local_recommendation
+}
+
+enum LocationGeocodeStatus {
+  not_started
+  pending
+  verified
+  ambiguous
+  failed
+  stale
+}
+
+enum LocationEnrichmentStatus {
+  not_started
+  pending
+  processing
+  ready
+  failed
+  stale
+}
+
+enum LocationPrecision {
+  rooftop
+  range_interpolated
+  geometric_center
+  approximate
+  unknown
+}
+
+enum NearbyPlaceCategory {
+  medical
+  pharmacy
+  transit
+  grocery
+}
+
+enum MapsTravelMode {
+  walking
+  driving
+}
+
+enum InquiryStatus {
+  open
+  closed
+  archived
+}
+
+enum BookingStatus {
+  requested
+  accepted
+  rejected
+  cancelled
+  payment_pending
+  paid
+  completed
+}
+
+enum BookingCancellationReason {
+  request_expired
+  payment_expired
+  payment_failed
+  full_refund
+  payment_disputed
+  renter_cancelled
+  host_cancelled
+  admin_cancelled
+}
+
+enum CancellationActorType {
+  renter
+  host
+  admin
+  system
+}
+
+enum CancellationOperationReason {
+  plans_changed
+  booking_no_longer_needed
+  property_unavailable
+  cannot_accommodate
+  safety_issue
+  support_resolution
+  fraud_risk
+  provider_failure
+  other
+  payment_expired
+  payment_failed
+  full_refund
+  payment_disputed
+  request_expired
+}
+
+enum BookingLifecycleSource {
+  operations_scheduler
+  legacy_backfill
+}
+
+enum CancellationOperationStatus {
+  requested
+  checkout_expiry_pending
+  refund_pending
+  refund_confirmed
+  transfer_reversal_pending
+  completed
+  failed_retryable
+  failed_permanent
+}
+
+enum CancellationFinancialDisposition {
+  no_payment_collected
+  checkout_expiry_pending
+  full_refund_pending
+  full_refund_confirmed
+  transfer_reversal_pending
+  financially_complete
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  expired
+  partially_refunded
+  refunded
+  disputed
+}
+
+enum StripeWebhookProcessingStatus {
+  received
+  processing
+  processed
+  failed
+  ignored
+}
+
+enum StripeAccountApiModel {
+  accounts_v2_recipient
+}
+
+enum ConnectCapabilityStatus {
+  pending
+  active
+  restricted
+  unsupported
+}
+
+enum HostTransferStatus {
+  pending
+  processing
+  transferred
+  failed
+  blocked
+}
+
+enum HostTransferReversalStatus {
+  none
+  pending
+  processing
+  partially_reversed
+  reversed
+  failed
+}
+
+enum AdminTargetType {
+  listing
+  verification
+  user
+  inquiry
+  healthcare_verification
+  healthcare_evidence
+}
+
+enum AdminActionType {
+  approve
+  reject
+  hide
+  disable_user
+  message_sent
+  evidence_viewed
+}
+
+enum OutboxEventStatus {
+  pending
+  publishing
+  enqueued
+  failed
+}
+
+enum JobExecutionState {
+  running
+  succeeded
+  failed
+}
+
+enum OperationalCommandType {
+  job_requeue
+  payment_reconciliation
+  host_transfer_reconciliation
+}
+
+enum OperationalCommandSource {
+  admin_api
+  cli
+}
+
+enum OperationalCommandStatus {
+  queued
+  running
+  succeeded
+  partially_succeeded
+  failed_retryable
+  failed_permanent
+}
+
+enum EmailProvider {
+  local
+  brevo
+}
+
+enum EmailDeliveryStatus {
+  pending
+  simulated
+  accepted
+  sent
+  delivered
+  deferred
+  soft_bounced
+  hard_bounced
+  blocked
+  invalid
+  complained
+  unsubscribed
+  suppressed
+  failed
+}
+
+enum EmailWebhookEventType {
+  request
+  sent
+  delivered
+  deferred
+  soft_bounce
+  hard_bounce
+  blocked
+  invalid
+  complaint
+  error
+  unsubscribed
+  unknown
+}
+
+enum EmailWebhookProcessingStatus {
+  received
+  processed
+  failed
+  ignored
+  unmatched
+}
+
+enum RecipientSuppressionReason {
+  hard_bounce
+  blocked
+  invalid
+  complaint
+}
+
+enum WorkerProcessType {
+  outbox
+  email
+  media
+  maps
+  operations
+}
+
+enum MediaPurpose {
+  listing_photo
+  profile_photo
+  healthcare_credential
+}
+
+enum MediaAssetStatus {
+  pending_upload
+  uploaded
+  processing
+  ready
+  rejected
+  deleted
+}
+
+enum MediaVariantType {
+  listing_thumbnail
+  listing_display
+  profile_small
+  profile_medium
+  profile_large
+  healthcare_review
+}
+
+model User {
+  id                        String             @id @default(uuid())
+  supabaseUserId            String             @unique
+  email                     String             @unique
+  emailVerifiedAt           DateTime?
+  firstName                 String?
+  lastName                  String?
+  displayName               String?
+  healthcareRole            HealthcareRole?
+  roles                     UserRole[]         @default([])
+  healthcareAffiliation     String?
+  phoneNumber               String?
+  bio                       String?
+  profilePhotoUrl           String?
+  activeProfileMediaAssetId String?            @unique
+  profileComplete           Boolean            @default(false)
+  currentVerificationStatus VerificationStatus @default(not_started)
+  disabledAt                DateTime?
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
+
+  healthcareVerifications  HealthcareVerification[]  @relation("UserVerifications")
+  identityVerifications    IdentityVerification[]
+  reviewedVerifications    HealthcareVerification[]  @relation("AdminReviewedVerifications")
+  listings                 Listing[]
+  renterInquiries          Inquiry[]                 @relation("RenterInquiries")
+  hostInquiries            Inquiry[]                 @relation("HostInquiries")
+  closedInquiries          Inquiry[]                 @relation("InquiryClosedBy")
+  inquiryParticipantStates InquiryParticipantState[]
+  messages                 Message[]
+  renterBookings           Booking[]                 @relation("RenterBookings")
+  hostBookings             Booking[]                 @relation("HostBookings")
+  reviews                  Review[]
+  adminActions             AdminAction[]
+  connectedAccount         ConnectedAccount?
+  hostTransfers            HostTransfer[]            @relation("HostTransfers")
+  cancellationOperations  BookingCancellationOperation[] @relation("CancellationActor")
+  operationalCommands     OperationalCommand[]            @relation("OperationalCommandRequester")
+  ownedMediaAssets         MediaAsset[]              @relation("MediaAssetOwner")
+  activeProfileMediaAsset  MediaAsset?               @relation("ActiveProfileMediaAsset", fields: [activeProfileMediaAssetId], references: [id])
+
+  @@index([supabaseUserId])
+  @@index([email])
+}
+
+model HealthcareVerification {
+  id                   String             @id @default(uuid())
+  userId               String
+  version              Int                @default(1)
+  claimedRole          HealthcareRole?
+  claimedAffiliationName String?           @db.VarChar(200)
+  claimedAffiliationType HealthcareAffiliationType?
+  evidenceCategory     HealthcareEvidenceCategory?
+  submissionStatus     HealthcareSubmissionStatus @default(created)
+  status               VerificationStatus @default(not_started)
+  aiReviewStatus       AiReviewStatus     @default(not_started)
+  aiRecommendation     AiRecommendation?
+  aiConfidence         Decimal?           @db.Decimal(4, 3)
+  aiReason             String?
+  aiReviewedAt         DateTime?
+  reviewedByAdminId    String?
+  adminReviewNote      String?            @db.VarChar(1000)
+  decisionReasonCode   HealthcareDecisionReasonCode?
+  submittedAt          DateTime?
+  reviewedAt           DateTime?
+  expiresAt            DateTime?
+  withdrawnAt          DateTime?
+  deletionRequestedAt  DateTime?
+  evidenceDeletedAt    DateTime?
+  deletionFailedAt     DateTime?
+  legacyRecord         Boolean            @default(false)
+  // Marks records whose legacy Veriff fields were migrated to IdentityVerification.
+  legacyIdentitySource Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  user            User  @relation("UserVerifications", fields: [userId], references: [id])
+  reviewedByAdmin User? @relation("AdminReviewedVerifications", fields: [reviewedByAdminId], references: [id])
+  evidence        HealthcareVerificationEvidence[]
+
+  @@index([userId])
+  @@index([status])
+  @@unique([userId, version])
+  @@index([submissionStatus, submittedAt])
+  @@index([claimedRole, submissionStatus])
+  @@index([evidenceCategory, submissionStatus])
+  @@index([reviewedByAdminId, reviewedAt])
+}
+
+model HealthcareVerificationEvidence {
+  id                       String    @id @default(uuid())
+  healthcareVerificationId String
+  mediaAssetId             String    @unique
+  sanitizedAt              DateTime?
+  lastAccessedAt           DateTime?
+  accessCount              Int       @default(0)
+  deletionRequestedAt      DateTime?
+  deletedAt                DateTime?
+  deletionFailedAt         DateTime?
+  deletionAttempts         Int       @default(0)
+  lastDeletionErrorCode    String?   @db.VarChar(100)
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  healthcareVerification HealthcareVerification @relation(fields: [healthcareVerificationId], references: [id])
+  mediaAsset             MediaAsset             @relation(fields: [mediaAssetId], references: [id])
+
+  @@index([healthcareVerificationId, deletedAt])
+  @@index([deletionRequestedAt, deletedAt, deletionFailedAt])
+}
+
+model IdentityVerification {
+  id                   String                     @id @default(uuid())
+  userId               String
+  provider             IdentityProvider           @default(veriff)
+  providerSessionId    String                     @unique
+  providerHostedUrl    String?
+  vendorData           String                     @unique
+  providerAttemptId    String?
+  status               IdentityVerificationStatus @default(created)
+  providerStatus       String?
+  providerCode         String?
+  reasonCode           String?
+  reasonCategory       String?
+  submittedAt          DateTime?
+  decidedAt            DateTime?
+  expiresAt            DateTime?
+  lastProviderUpdateAt DateTime?
+  supersededAt         DateTime?
+  supersededById       String?
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+
+  user          User                   @relation(fields: [userId], references: [id])
+  supersededBy  IdentityVerification?  @relation("IdentityVerificationSupersession", fields: [supersededById], references: [id])
+  supersedes    IdentityVerification[] @relation("IdentityVerificationSupersession")
+  webhookEvents IdentityWebhookEvent[]
+
+  @@index([userId, status])
+  @@index([userId, supersededAt])
+}
+
+model IdentityWebhookEvent {
+  id                     String                          @id @default(uuid())
+  deliveryKey            String                          @unique
+  provider               IdentityProvider                @default(veriff)
+  kind                   IdentityWebhookKind
+  identityVerificationId String?
+  providerSessionId      String?
+  providerAttemptId      String?
+  providerStatus         String?
+  providerCode           String?
+  providerOccurredAt     DateTime?
+  payloadDigest          String
+  payload                Json
+  status                 IdentityWebhookProcessingStatus @default(received)
+  receivedAt             DateTime                        @default(now())
+  processedAt            DateTime?
+  lastError              String?
+  processingAttempts     Int                             @default(0)
+
+  identityVerification IdentityVerification? @relation(fields: [identityVerificationId], references: [id])
+
+  @@index([status, receivedAt])
+  @@index([providerSessionId])
+}
+
+model Listing {
+  id                 String           @id @default(uuid())
+  hostId             String
+  title              String
+  description        String
+  city               String
+  timeZone           String           @default("UTC") @db.VarChar(64)
+  checkoutTime       String           @default("11:00") @db.VarChar(5)
+  address            String?
+  latitude           Decimal?         @db.Decimal(10, 7)
+  longitude          Decimal?         @db.Decimal(10, 7)
+  publicLatitude     Decimal?         @db.Decimal(10, 7)
+  publicLongitude    Decimal?         @db.Decimal(10, 7)
+  publicRadiusMeters Int              @default(500)
+  priceCents         Int
+  currency           String           @default("USD")
+  priceUnit          PriceUnit
+  listingType        ListingType
+  category           String?
+  status             ListingStatus    @default(pending)
+  stayDurations      StayDuration[]   @default([])
+  proximityTags      ProximityTag[]   @default([])
+  specialFeatures    SpecialFeature[] @default([])
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  deletedAt          DateTime?
+
+  host          User                  @relation(fields: [hostId], references: [id])
+  photos        ListingPhoto[]
+  uploadIntents ListingUploadIntent[]
+  availability  ListingAvailability[]
+  places        ListingPlace[]
+  inquiries     Inquiry[]
+  bookings      Booking[]
+  reviews       Review[]
+  mediaAssets   MediaAsset[]
+  location      ListingLocation?
+  nearbyPlaces  NearbyPlace[]
+
+  @@index([hostId])
+  @@index([city])
+  @@index([status])
+  @@index([status, city, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([status, city, priceCents, id])
+}
+
+model ListingLocation {
+  id                     String                   @id @default(uuid())
+  listingId              String                   @unique
+  inputAddress           String?
+  inputCity              String?
+  inputPlaceId           String?
+  addressFingerprint     String?
+  verifiedFingerprint    String?
+  formattedAddress       String?
+  providerPlaceId        String?
+  exactLatitude          Decimal?                 @db.Decimal(10, 7)
+  exactLongitude         Decimal?                 @db.Decimal(10, 7)
+  geocodeStatus          LocationGeocodeStatus    @default(not_started)
+  precision              LocationPrecision?
+  provider               String?
+  addressVersion         Int                      @default(1)
+  verifiedAddressVersion Int?
+  geocodedAt             DateTime?
+  geocodeExpiresAt       DateTime?
+  failureCategory        String?
+  geocodeAttempts        Int                      @default(0)
+  enrichmentStatus       LocationEnrichmentStatus @default(not_started)
+  enrichmentVersion      Int?
+  nearbyEnrichedAt       DateTime?
+  nearbyExpiresAt        DateTime?
+  processingStartedAt    DateTime?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+
+  listing      Listing       @relation(fields: [listingId], references: [id])
+  nearbyPlaces NearbyPlace[]
+
+  @@index([geocodeStatus, updatedAt])
+  @@index([enrichmentStatus, nearbyExpiresAt])
+}
+
+model NearbyPlace {
+  id                         String              @id @default(uuid())
+  listingId                  String
+  listingLocationId          String
+  addressVersion             Int
+  providerPlaceId            String
+  category                   NearbyPlaceCategory
+  displayName                String
+  mapsUrl                    String?
+  latitude                   Decimal?            @db.Decimal(10, 7)
+  longitude                  Decimal?            @db.Decimal(10, 7)
+  straightLineDistanceMeters Int
+  routeDistanceMeters        Int?
+  routeDurationSeconds       Int?
+  routeMode                  MapsTravelMode?
+  provider                   String
+  fetchedAt                  DateTime
+  expiresAt                  DateTime
+  rank                       Int
+  createdAt                  DateTime            @default(now())
+  updatedAt                  DateTime            @updatedAt
+
+  listing         Listing         @relation(fields: [listingId], references: [id])
+  listingLocation ListingLocation @relation(fields: [listingLocationId], references: [id])
+
+  @@unique([listingLocationId, addressVersion, category, providerPlaceId])
+  @@index([listingId, category, expiresAt])
+  @@index([listingLocationId, addressVersion])
+}
+
+model ListingPhoto {
+  id                String    @id @default(uuid())
+  listingId         String
+  storagePath       String
+  fileUrl           String
+  displayOrder      Int       @default(0)
+  mediaAssetId      String?   @unique
+  legacyUnprocessed Boolean   @default(false)
+  deletedAt         DateTime?
+  createdAt         DateTime  @default(now())
+
+  listing    Listing     @relation(fields: [listingId], references: [id])
+  mediaAsset MediaAsset? @relation(fields: [mediaAssetId], references: [id])
+
+  @@unique([listingId, displayOrder])
+  @@index([listingId])
+}
+
+model MediaAsset {
+  id                  String           @id @default(uuid())
+  purpose             MediaPurpose
+  ownerUserId         String
+  listingId           String?
+  ingestBucket        String
+  ingestStoragePath   String           @unique
+  status              MediaAssetStatus @default(pending_upload)
+  claimedFileName     String
+  claimedContentType  String
+  detectedContentType String?
+  detectedFormat      String?
+  originalByteSize    Int?
+  decodedWidth        Int?
+  decodedHeight       Int?
+  checksumSha256      String?
+  rejectionCode       String?
+  rejectionReason     String?
+  processingAttempts  Int              @default(0)
+  displayOrder        Int?
+  expiresAt           DateTime
+  uploadedAt          DateTime?
+  processingStartedAt DateTime?
+  processedAt         DateTime?
+  failedAt            DateTime?
+  cleanupRequestedAt  DateTime?
+  ingestDeletedAt     DateTime?
+  deletedAt           DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  owner         User           @relation("MediaAssetOwner", fields: [ownerUserId], references: [id])
+  activeForUser User?          @relation("ActiveProfileMediaAsset")
+  listing       Listing?       @relation(fields: [listingId], references: [id])
+  variants      MediaVariant[]
+  listingPhoto  ListingPhoto?
+  healthcareEvidence HealthcareVerificationEvidence?
+
+  @@index([ownerUserId, purpose, status])
+  @@index([listingId, status, displayOrder])
+  @@index([status, expiresAt])
+  @@index([status, processingStartedAt])
+}
+
+model MediaVariant {
+  id             String           @id @default(uuid())
+  mediaAssetId   String
+  type           MediaVariantType
+  storageBucket  String
+  storagePath    String           @unique
+  width          Int
+  height         Int
+  byteSize       Int
+  contentType    String
+  checksumSha256 String
+  deletedAt      DateTime?
+  createdAt      DateTime         @default(now())
+
+  mediaAsset MediaAsset @relation(fields: [mediaAssetId], references: [id])
+
+  @@unique([mediaAssetId, type])
+  @@index([mediaAssetId, deletedAt])
+}
+
+model ListingUploadIntent {
+  id          String    @id @default(uuid())
+  listingId   String
+  storagePath String    @unique
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  listing Listing @relation(fields: [listingId], references: [id])
+
+  @@index([listingId, consumedAt, expiresAt])
+}
+
+model ListingAvailability {
+  id        String             @id @default(uuid())
+  listingId String
+  startDate DateTime           @db.Date
+  endDate   DateTime           @db.Date
+  status    AvailabilityStatus
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  listing Listing @relation(fields: [listingId], references: [id])
+
+  @@index([listingId])
+  @@index([listingId, status, startDate, endDate])
+  @@index([startDate, endDate])
+}
+
+model ListingPlace {
+  id            String           @id @default(uuid())
+  listingId     String
+  type          ListingPlaceType
+  label         String
+  googlePlaceId String?
+  mapsUrl       String?
+  displayOrder  Int              @default(0)
+  createdAt     DateTime         @default(now())
+
+  listing Listing @relation(fields: [listingId], references: [id])
+
+  @@index([listingId])
+}
+
+model Inquiry {
+  id            String        @id @default(uuid())
+  listingId     String
+  renterId      String
+  hostId        String
+  status        InquiryStatus @default(open)
+  lastSequence  Int           @default(0)
+  lastMessageAt DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  closedAt      DateTime?
+  closedById    String?
+
+  listing           Listing                   @relation(fields: [listingId], references: [id])
+  renter            User                      @relation("RenterInquiries", fields: [renterId], references: [id])
+  host              User                      @relation("HostInquiries", fields: [hostId], references: [id])
+  closedBy          User?                     @relation("InquiryClosedBy", fields: [closedById], references: [id])
+  messages          Message[]
+  participantStates InquiryParticipantState[]
+
+  @@index([listingId])
+  @@index([renterId, closedAt, lastMessageAt])
+  @@index([hostId, closedAt, lastMessageAt])
+  @@index([renterId, closedAt, lastMessageAt(sort: Desc), id(sort: Desc)])
+  @@index([hostId, closedAt, lastMessageAt(sort: Desc), id(sort: Desc)])
+}
+
+model Message {
+  id         String    @id @default(uuid())
+  inquiryId  String
+  sequence   Int
+  senderId   String
+  senderRole UserRole
+  body       String
+  createdAt  DateTime  @default(now())
+  readAt     DateTime?
+
+  inquiry Inquiry @relation(fields: [inquiryId], references: [id])
+  sender  User    @relation(fields: [senderId], references: [id])
+
+  @@unique([inquiryId, sequence])
+  @@index([inquiryId, createdAt])
+  @@index([senderId])
+}
+
+model InquiryParticipantState {
+  id               String    @id @default(uuid())
+  inquiryId        String
+  userId           String
+  role             UserRole
+  lastReadSequence Int       @default(0)
+  lastReadAt       DateTime?
+  archivedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  inquiry Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([inquiryId, userId])
+  @@index([userId, archivedAt])
+  @@index([inquiryId, userId, lastReadSequence])
+}
+
+model Booking {
+  id                 String                     @id @default(uuid())
+  listingId          String
+  renterId           String
+  hostId             String
+  startDate          DateTime                   @db.Date
+  endDate            DateTime                   @db.Date
+  timeZone           String                     @default("UTC") @db.VarChar(64)
+  checkoutTime       String                     @default("11:00") @db.VarChar(5)
+  selectedOption     String
+  additionalRequests String?
+  status             BookingStatus              @default(requested)
+  totalAmountCents   Int
+  currency           String                     @default("USD")
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  requestExpiresAt   DateTime                   @default(dbgenerated("(CURRENT_TIMESTAMP + '24:00:00'::interval)"))
+  expiredAt          DateTime?
+  expirySource       BookingLifecycleSource?
+  completedAt        DateTime?
+  completionSource   BookingLifecycleSource?
+  cancelledAt        DateTime?
+  cancellationReason BookingCancellationReason?
+
+  listing          Listing                  @relation(fields: [listingId], references: [id])
+  renter           User                     @relation("RenterBookings", fields: [renterId], references: [id])
+  host             User                     @relation("HostBookings", fields: [hostId], references: [id])
+  payments         Payment[]
+  review           Review?
+  hostTransfer     HostTransfer?
+  locationSnapshot BookingLocationSnapshot?
+  cancellationOperations BookingCancellationOperation[]
+
+  @@index([listingId])
+  @@index([listingId, status, startDate, endDate])
+  @@index([renterId])
+  @@index([hostId])
+  @@index([renterId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([hostId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([startDate, endDate])
+  @@index([status, requestExpiresAt])
+  @@index([status, endDate])
+}
+
+model BookingLocationSnapshot {
+  id                           String   @id @default(uuid())
+  bookingId                    String   @unique
+  formattedAddress             String
+  exactLatitude                Decimal? @db.Decimal(10, 7)
+  exactLongitude               Decimal? @db.Decimal(10, 7)
+  sourceListingLocationVersion Int?
+  legacyBackfill               Boolean  @default(false)
+  capturedAt                   DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+}
+
+model Payment {
+  id                         String        @id @default(uuid())
+  bookingId                  String
+  provider                   String        @default("stripe")
+  providerCheckoutSessionId  String?       @unique
+  providerPaymentIntentId    String?       @unique
+  providerChargeId           String?       @unique
+  attemptNumber              Int
+  idempotencyKey             String?       @unique
+  amountCents                Int
+  currency                   String        @default("USD")
+  status                     PaymentStatus @default(pending)
+  active                     Boolean       @default(false)
+  expiresAt                  DateTime?
+  amountRefundedCents        Int           @default(0)
+  failureReason              String?
+  lastProviderEventId        String?
+  lastProviderEventCreatedAt DateTime?
+  createdAt                  DateTime      @default(now())
+  updatedAt                  DateTime      @updatedAt
+  paidAt                     DateTime?
+  refundedAt                 DateTime?
+
+  booking      Booking       @relation(fields: [bookingId], references: [id])
+  hostTransfer HostTransfer?
+  cancellationOperations BookingCancellationOperation[]
+
+  @@unique([bookingId, attemptNumber])
+  @@index([bookingId])
+  @@index([status, createdAt(sort: Desc), id(sort: Desc)])
+}
+
+model BookingCancellationOperation {
+  id                   String                           @id @default(uuid())
+  bookingId            String
+  paymentId            String?
+  version              Int                              @default(1)
+  actorType            CancellationActorType
+  actorUserId          String?
+  reason               CancellationOperationReason
+  status               CancellationOperationStatus     @default(requested)
+  financialDisposition CancellationFinancialDisposition
+  idempotencyKey       String                           @db.VarChar(200)
+  active               Boolean                          @default(true)
+  providerOperationRef String?                          @db.VarChar(255)
+  failureCode          String?                          @db.VarChar(100)
+  requestedAt          DateTime                         @default(now())
+  effectiveAt          DateTime?
+  failedAt             DateTime?
+  createdAt            DateTime                         @default(now())
+  updatedAt            DateTime                         @updatedAt
+
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  payment   Payment? @relation(fields: [paymentId], references: [id])
+  actorUser User?    @relation("CancellationActor", fields: [actorUserId], references: [id])
+
+  @@unique([bookingId, version])
+  @@unique([bookingId, idempotencyKey])
+  @@index([bookingId, active])
+  @@index([paymentId])
+  @@index([status, updatedAt])
+  @@index([actorUserId])
+}
+
+model ConnectedAccount {
+  id                       String                  @id @default(uuid())
+  userId                   String                  @unique
+  providerAccountId        String                  @unique
+  apiModel                 StripeAccountApiModel   @default(accounts_v2_recipient)
+  country                  String?
+  currency                 String?
+  detailsSubmitted         Boolean                 @default(false)
+  transfersCapability      ConnectCapabilityStatus @default(pending)
+  transfersReady           Boolean                 @default(false)
+  payoutsEnabled           Boolean?
+  requirementsCurrentlyDue Json                    @default("[]")
+  requirementsPastDue      Json                    @default("[]")
+  lastSynchronizedAt       DateTime
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id])
+  hostTransfers HostTransfer[]
+
+  @@index([transfersReady])
+}
+
+model HostTransfer {
+  id                         String                     @id @default(uuid())
+  bookingId                  String                     @unique
+  paymentId                  String                     @unique
+  hostId                     String
+  connectedAccountId         String
+  providerConnectedAccountId String
+  grossAmountCents           Int
+  platformFeeCents           Int
+  hostNetAmountCents         Int
+  currency                   String
+  transferGroup              String                     @unique
+  status                     HostTransferStatus         @default(pending)
+  providerTransferId         String?                    @unique
+  idempotencyKey             String                     @unique
+  eligibleAt                 DateTime
+  transferredAt              DateTime?
+  failedAt                   DateTime?
+  failureCode                String?
+  failureMessage             String?
+  reversedAmountCents        Int                        @default(0)
+  reversalTargetAmountCents  Int                        @default(0)
+  reversalStatus             HostTransferReversalStatus @default(none)
+  reversalProviderIds        Json                       @default("[]")
+  reversalIdempotencyKey     String?
+  reversalFailedAt           DateTime?
+  reversalFailureCode        String?
+  reversalFailureMessage     String?
+  createdAt                  DateTime                   @default(now())
+  updatedAt                  DateTime                   @updatedAt
+
+  booking          Booking          @relation(fields: [bookingId], references: [id])
+  payment          Payment          @relation(fields: [paymentId], references: [id])
+  host             User             @relation("HostTransfers", fields: [hostId], references: [id])
+  connectedAccount ConnectedAccount @relation(fields: [connectedAccountId], references: [id])
+
+  @@unique([bookingId, paymentId])
+  @@index([status, eligibleAt])
+  @@index([reversalStatus, updatedAt])
+  @@index([hostId])
+  @@index([status, createdAt(sort: Desc), id(sort: Desc)])
+}
+
+model StripeWebhookEvent {
+  id                 String                        @id @default(uuid())
+  providerEventId    String                        @unique
+  eventType          String
+  providerObjectId   String?
+  status             StripeWebhookProcessingStatus @default(received)
+  payload            Json
+  receivedAt         DateTime                      @default(now())
+  processedAt        DateTime?
+  lastError          String?
+  processingAttempts Int                           @default(0)
+
+  @@index([status, receivedAt])
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  listingId  String
+  bookingId  String   @unique
+  reviewerId String
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  listing  Listing @relation(fields: [listingId], references: [id])
+  booking  Booking @relation(fields: [bookingId], references: [id])
+  reviewer User    @relation(fields: [reviewerId], references: [id])
+
+  @@index([listingId])
+  @@index([reviewerId])
+}
+
+model AdminAction {
+  id         String          @id @default(uuid())
+  adminId    String
+  targetType AdminTargetType
+  targetId   String
+  action     AdminActionType
+  note       String?
+  createdAt  DateTime        @default(now())
+
+  admin User @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([targetType, targetId])
+}
+
+model OutboxEvent {
+  id             String            @id @default(uuid())
+  eventType      String
+  aggregateType  String
+  aggregateId    String
+  payload        Json
+  idempotencyKey String            @unique
+  status         OutboxEventStatus @default(pending)
+  attempts       Int               @default(0)
+  maxAttempts    Int               @default(3)
+  errorCategory  String?
+  lastError      String?
+  availableAt    DateTime          @default(now())
+  claimedAt      DateTime?
+  claimExpiresAt DateTime?
+  claimedBy      String?
+  enqueuedAt     DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  executions    JobExecution[]
+  emailDelivery EmailDelivery?
+
+  @@index([status, availableAt])
+  @@index([status, claimExpiresAt])
+  @@index([aggregateType, aggregateId])
+}
+
+model JobExecution {
+  id             String            @id @default(uuid())
+  outboxEventId  String?
+  queueName      String
+  jobType        String
+  jobId          String
+  aggregateType  String?
+  aggregateId    String?
+  attemptNumber  Int
+  state          JobExecutionState @default(running)
+  workerIdentity String
+  startedAt      DateTime          @default(now())
+  completedAt    DateTime?
+  retryable      Boolean?
+  errorCategory  String?
+  errorMessage   String?
+  providerRef    String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  outboxEvent OutboxEvent? @relation(fields: [outboxEventId], references: [id])
+
+  @@unique([queueName, jobId, attemptNumber])
+  @@index([state, startedAt])
+  @@index([outboxEventId])
+  @@index([queueName, state, updatedAt])
+  @@index([queueName, state, createdAt(sort: Desc), id(sort: Desc)])
+}
+
+model OperationalCommand {
+  id                    String                   @id @default(uuid())
+  commandType           OperationalCommandType
+  source                OperationalCommandSource
+  idempotencyKey        String                   @unique @db.VarChar(200)
+  requestedById         String?
+  targetId              String?
+  reason                String                   @db.VarChar(500)
+  status                OperationalCommandStatus @default(queued)
+  batchLimit            Int?
+  staleBefore           DateTime?
+  scannedCount          Int                      @default(0)
+  succeededCount        Int                      @default(0)
+  skippedCount          Int                      @default(0)
+  retryableFailureCount Int                      @default(0)
+  permanentFailureCount Int                      @default(0)
+  providerCallCount     Int                      @default(0)
+  resultCode            String?                  @db.VarChar(100)
+  lastFailureCategory   String?                  @db.VarChar(100)
+  startedAt             DateTime?
+  completedAt           DateTime?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  requestedBy User? @relation("OperationalCommandRequester", fields: [requestedById], references: [id])
+
+  @@index([commandType, status, createdAt])
+  @@index([targetId, createdAt])
+  @@index([requestedById, createdAt])
+}
+
+model EmailDelivery {
+  id                  String              @id @default(uuid())
+  outboxEventId       String              @unique
+  recipient           String
+  recipientHash       String
+  template            String
+  provider            EmailProvider
+  providerMessageId   String?             @unique
+  status              EmailDeliveryStatus @default(pending)
+  attempts            Int                 @default(0)
+  acceptedAt          DateTime?
+  sentAt              DateTime?
+  deliveredAt         DateTime?
+  deferredAt          DateTime?
+  softBouncedAt       DateTime?
+  hardBouncedAt       DateTime?
+  blockedAt           DateTime?
+  invalidAt           DateTime?
+  complainedAt        DateTime?
+  unsubscribedAt      DateTime?
+  suppressedAt        DateTime?
+  failedAt            DateTime?
+  lastEventAt         DateTime?
+  lastEventPrecedence Int                 @default(0)
+  errorCategory       String?
+  errorMessage        String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  outboxEvent   OutboxEvent         @relation(fields: [outboxEventId], references: [id])
+  webhookEvents EmailWebhookEvent[]
+
+  @@index([status, updatedAt])
+  @@index([recipientHash, status])
+}
+
+model EmailWebhookEvent {
+  id                 String                       @id @default(uuid())
+  deliveryKey        String                       @unique
+  emailDeliveryId    String?
+  providerMessageId  String
+  eventType          EmailWebhookEventType
+  occurredAt         DateTime
+  payloadDigest      String
+  payload            Json
+  status             EmailWebhookProcessingStatus @default(received)
+  processingAttempts Int                          @default(0)
+  receivedAt         DateTime                     @default(now())
+  processedAt        DateTime?
+  errorCategory      String?
+  errorMessage       String?
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+
+  emailDelivery EmailDelivery? @relation(fields: [emailDeliveryId], references: [id])
+
+  @@index([status, receivedAt])
+  @@index([providerMessageId, occurredAt])
+}
+
+model RecipientSuppression {
+  id                String                     @id @default(uuid())
+  recipientHash     String                     @unique
+  reason            RecipientSuppressionReason
+  providerMessageId String?
+  active            Boolean                    @default(true)
+  suppressedAt      DateTime                   @default(now())
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+
+  @@index([active, reason])
+}
+
+model WorkerHeartbeat {
+  id               String            @id @default(uuid())
+  processType      WorkerProcessType
+  instanceId       String
+  processStartedAt DateTime
+  lastHeartbeatAt  DateTime
+  version          String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@unique([processType, instanceId])
+  @@index([processType, lastHeartbeatAt])
+}

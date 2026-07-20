@@ -1,0 +1,250 @@
+{
+  "dataset": {
+    "listings": 2000,
+    "availabilityWindows": 2000,
+    "bookings": 4000,
+    "inquiries": 1000,
+    "messages": 10000,
+    "payments": 4000,
+    "hostTransfers": 1000,
+    "jobExecutions": 5000,
+    "outboxEvents": 5000,
+    "operationalCommands": 2000
+  },
+  "plans": [
+    {
+      "name": "listing_search_city_newest",
+      "planningTimeMs": 0.729,
+      "executionTimeMs": 0.073,
+      "nodes": [
+        {
+          "nodeType": "Limit"
+        },
+        {
+          "nodeType": "Index Scan",
+          "relation": "Listing",
+          "index": "Listing_status_city_createdAt_id_idx"
+        }
+      ]
+    },
+    {
+      "name": "listing_date_availability",
+      "planningTimeMs": 0.46,
+      "executionTimeMs": 0.049,
+      "nodes": [
+        {
+          "nodeType": "Index Scan",
+          "relation": "ListingAvailability",
+          "index": "ListingAvailability_listingId_idx"
+        }
+      ]
+    },
+    {
+      "name": "listing_search_city_price",
+      "planningTimeMs": 0.126,
+      "executionTimeMs": 0.066,
+      "nodes": [
+        {
+          "nodeType": "Limit"
+        },
+        {
+          "nodeType": "Index Scan",
+          "relation": "Listing",
+          "index": "Listing_status_city_priceCents_id_idx"
+        }
+      ]
+    },
+    {
+      "name": "booking_renter_list",
+      "planningTimeMs": 0.616,
+      "executionTimeMs": 0.065,
+      "nodes": [
+        {
+          "nodeType": "Limit"
+        },
+        {
+          "nodeType": "Index Only Scan",
+          "relation": "Booking",
+          "index": "Booking_renterId_createdAt_id_idx"
+        }
+      ]
+    },
+    {
+      "name": "booking_host_list",
+      "planningTimeMs": 0.132,
+      "executionTimeMs": 0.054,
+      "nodes": [
+        {
+          "nodeType": "Limit"
+        },
+        {
+          "nodeType": "Index Only Scan",
+          "relation": "Booking",
+          "index": "Booking_hostId_createdAt_id_idx"
+        }
+      ]
+    },
+    {
+      "name": "booking_detail",
+      "planningTimeMs": 0.128,
+      "executionTimeMs": 0.04,
+      "nodes": [
+        {
+          "nodeType": "Index Scan",
+          "relation": "Booking",
+          "index": "Booking_pkey"
+        }
+      ]
+    },
+    {
+      "name": "inquiry_participant_list",
+      "planningTimeMs": 0.616,
+      "executionTimeMs": 0.117,
+      "nodes": [
+        {
+          "nodeType": "Limit"
+        },
+        {
+          "nodeType": "Sort"
+        },
+        {
+          "nodeType": "Bitmap Heap Scan",
+          "relation": "Inquiry"
+        },
+        {
+          "nodeType": "Bitmap Index Scan",
+          "index": "Inquiry_renterId_closedAt_lastMessageAt_id_idx"
+        }
+      ]
+    },
+    {
+      "name": "message_sequence_catchup",
+      "planningTimeMs": 0.435,
+      "executionTimeMs": 0.069,
+      "nodes": [
+        {
+          "nodeType": "Limit"
+        },
+        {
+          "nodeType": "Index Scan",
+          "relation": "Message",
+          "index": "Message_inquiryId_sequence_key"
+        }
+      ]
+    },
+    {
+      "name": "host_calendar_projection",
+      "planningTimeMs": 0.14,
+      "executionTimeMs": 0.065,
+      "nodes": [
+        {
+          "nodeType": "Sort"
+        },
+        {
+          "nodeType": "Index Scan",
+          "relation": "ListingAvailability",
+          "index": "ListingAvailability_listingId_idx"
+        }
+      ]
+    },
+    {
+      "name": "admin_payment_list",
+      "planningTimeMs": 0.612,
+      "executionTimeMs": 0.072,
+      "nodes": [
+        {
+          "nodeType": "Limit"
+        },
+        {
+          "nodeType": "Index Only Scan",
+          "relation": "Payment",
+          "index": "Payment_status_createdAt_id_idx"
+        }
+      ]
+    },
+    {
+      "name": "admin_transfer_list",
+      "planningTimeMs": 0.706,
+      "executionTimeMs": 0.073,
+      "nodes": [
+        {
+          "nodeType": "Limit"
+        },
+        {
+          "nodeType": "Index Only Scan",
+          "relation": "HostTransfer",
+          "index": "HostTransfer_status_createdAt_id_idx"
+        }
+      ]
+    },
+    {
+      "name": "admin_job_list",
+      "planningTimeMs": 0.496,
+      "executionTimeMs": 0.073,
+      "nodes": [
+        {
+          "nodeType": "Limit"
+        },
+        {
+          "nodeType": "Index Only Scan",
+          "relation": "JobExecution",
+          "index": "JobExecution_queueName_state_createdAt_id_idx"
+        }
+      ]
+    },
+    {
+      "name": "admin_command_list",
+      "planningTimeMs": 0.463,
+      "executionTimeMs": 0.095,
+      "nodes": [
+        {
+          "nodeType": "Limit"
+        },
+        {
+          "nodeType": "Incremental Sort"
+        },
+        {
+          "nodeType": "Index Scan",
+          "relation": "OperationalCommand",
+          "index": "OperationalCommand_commandType_status_createdAt_idx"
+        }
+      ]
+    },
+    {
+      "name": "outbox_worker_scan",
+      "planningTimeMs": 0.471,
+      "executionTimeMs": 0.104,
+      "nodes": [
+        {
+          "nodeType": "Limit"
+        },
+        {
+          "nodeType": "Incremental Sort"
+        },
+        {
+          "nodeType": "Index Scan",
+          "relation": "OutboxEvent",
+          "index": "OutboxEvent_status_availableAt_idx"
+        }
+      ]
+    },
+    {
+      "name": "booking_expiry_scan",
+      "planningTimeMs": 0.155,
+      "executionTimeMs": 0.058,
+      "nodes": [
+        {
+          "nodeType": "Limit"
+        },
+        {
+          "nodeType": "Incremental Sort"
+        },
+        {
+          "nodeType": "Index Scan",
+          "relation": "Booking",
+          "index": "Booking_status_requestExpiresAt_idx"
+        }
+      ]
+    }
+  ]
+}

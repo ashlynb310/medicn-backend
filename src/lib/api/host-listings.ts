@@ -1,10 +1,44 @@
-import { ApiError, apiFetch } from "./client";
+import { apiFetch } from "./client";
 import type {
   CreatedListing,
   CreateListingInput,
   ListingPhotoRecord,
+  ListingStatus,
+  ListingSummary,
+  PaginationMeta,
   PresignedUpload,
 } from "./types";
+
+export interface MyListingsParams {
+  status?: ListingStatus;
+  page?: number;
+  limit?: number;
+}
+
+/**
+ * GET /api/v1/listings/mine — the caller's own listings (host/admin), including
+ * draft/pending/rejected/hidden/approved. Same summary shape + pagination meta
+ * as search. Requires a bearer token.
+ */
+export async function listMyListings(
+  params: MyListingsParams = {},
+  accessToken?: string,
+  signal?: AbortSignal
+) {
+  const { data, meta } = await apiFetch<ListingSummary[], PaginationMeta>(
+    "/listings/mine",
+    {
+      query: {
+        status: params.status,
+        page: params.page,
+        limit: params.limit,
+      },
+      accessToken,
+      signal,
+    }
+  );
+  return { listings: data, meta };
+}
 
 // Host-only listing + photo endpoints. All require a Supabase bearer token;
 // when omitted, apiFetch falls back to the ambient (logged-in) token.
@@ -45,38 +79,6 @@ export async function createPresignedUpload(
  * createPresignedUpload. The token is embedded in the URL, so no Authorization
  * header is sent. Throws ApiError on a non-2xx storage response.
  */
-export async function uploadFileToSignedUrl(uploadUrl: string, file: File) {
-  let response: Response;
-  try {
-    response = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: {
-        "content-type": file.type || "application/octet-stream",
-        "x-upsert": "true",
-      },
-      body: file,
-    });
-  } catch {
-    throw new ApiError(
-      {
-        code: "UPLOAD_NETWORK_ERROR",
-        message: "Could not reach storage to upload the photo.",
-      },
-      0
-    );
-  }
-
-  if (!response.ok) {
-    throw new ApiError(
-      {
-        code: "UPLOAD_FAILED",
-        message: `Storage rejected the upload (${response.status}).`,
-      },
-      response.status
-    );
-  }
-}
-
 /** POST /api/v1/listings/:id/photos — register an uploaded photo's storagePath. */
 export async function addListingPhoto(
   listingId: string,

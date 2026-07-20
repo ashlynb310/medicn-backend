@@ -223,3 +223,36 @@ export interface ListingPhotoRecord {
   fileUrl: string;
   displayOrder: number;
 }
+
+// --- Admin moderation (see medicn/apps/api/src/admin) ---
+
+// Host identity fields the admin endpoints expose for moderation. Distinct from
+// the public ListingHostSummary — includes email and lastName.
+export interface AdminListingHost {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  displayName: string | null;
+}
+
+// Mirrors AdminService.toListingDto — note: no stayDurations; has createdAt.
+export interface AdminListing {
+  id: string;
+  title: string;
+  city: string;
+  priceCents: number;
+  currency: string;
+  priceUnit: PriceUnit;
+  status: ListingStatus;
+  coverPhotoUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+  host: AdminListingHost;
+}
+
+// Matches ModerateListingDto: status is exactly approved|rejected, note ≤1000.
+export interface ModerateListingInput {
+  status: "approved" | "rejected";
+  note?: string;
+}

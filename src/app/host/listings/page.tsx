@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { List, SquarePlus } from "lucide-react";
+import { SquarePlus } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
 import AuthGate from "@/components/auth/auth-gate";
-import EmptyState from "@/components/ui/empty-state";
+import HostListingsList from "@/components/host/host-listings-list";
 import { ButtonLink } from "@/components/ui/button-link";
 
 export const metadata: Metadata = {
@@ -10,18 +10,14 @@ export const metadata: Metadata = {
   description: "Manage the properties you host on The MediCN.",
 };
 
-// BLOCKED BY BACKEND: there is no host-owned listings endpoint. GET
-// /api/v1/listings only returns APPROVED listings and has no hostId filter, and
-// GET /api/v1/listings/:id only returns approved listings — so a host's own
-// pending/draft listings cannot be fetched or listed. Rather than show the
-// wrong data (all approved listings) or fake it, this page stays an honest
-// empty state until a backend "my listings" endpoint exists.
+// Wired to GET /api/v1/listings/mine (Phase 4.5): the host's own listings across
+// all statuses, with status filter, pagination, and loading/empty/error states.
 export default function HostListingsPage() {
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
         title="My listings"
-        description="Every property you host, with its review status and booking activity."
+        description="Every property you host, with its review status."
         actions={
           <ButtonLink href="/host/listings/new">
             <SquarePlus aria-hidden="true" />
@@ -33,17 +29,7 @@ export default function HostListingsPage() {
         message="Sign in with a host account to view and manage your listings."
         returnTo="/host/listings"
       >
-        <EmptyState
-          icon={List}
-          title="Listing management isn't available yet"
-          description="You can create a listing now, but the backend does not yet provide a way to list your own properties here. Once a host listings endpoint exists, your listings and their review status will appear on this page."
-          action={
-            <ButtonLink href="/host/listings/new">
-              <SquarePlus aria-hidden="true" />
-              Create a listing
-            </ButtonLink>
-          }
-        />
+        <HostListingsList />
       </AuthGate>
     </div>
   );

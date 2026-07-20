@@ -9,8 +9,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button-link";
 import { BookingStatusBadge } from "@/components/ui/status-badge";
+import { CircleAlert } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
-import { getBooking } from "@/lib/api/bookings";
+import { getBooking, updateBookingStatus } from "@/lib/api/bookings";
 import { ApiError, toErrorMessage } from "@/lib/api/client";
 import type { Booking } from "@/lib/api/types";
 import { formatPrice, formatDate, formatEnumLabel } from "@/lib/listing-format";
@@ -42,6 +43,11 @@ export default function BookingDetailPanel({
   const { accessToken, user } = useAuth();
   const [state, setState] = useState<State>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
+  const [deciding, setDeciding] = useState<null | "accepted" | "rejected">(null);
+  const [decisionError, setDecisionError] = useState<{
+    code: string;
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -67,6 +73,7 @@ export default function BookingDetailPanel({
   }, [bookingId, accessToken, attempt]);
 
   const retry = () => {
+    setDecisionError(null);
     setState({ status: "loading" });
     setAttempt((n) => n + 1);
   };
@@ -111,6 +118,29 @@ export default function BookingDetailPanel({
     counterpart.displayName || counterpart.firstName || counterpart.email;
   const nights = nightsBetween(booking.startDate, booking.endDate);
   const canCheckout = CHECKOUTABLE.has(booking.status);
+  const canDecide = isHost && booking.status === "requested";
+
+  const decide = async (next: "accepted" | "rejected") => {
+    setDecisionError(null);
+    setDeciding(next);
+    try {
+      // Only reflect the new status after the backend confirms the decision.
+      const updated = await updateBookingStatus(
+        booking.id,
+        next,
+        accessToken ?? undefined
+      );
+      setState({ status: "ready", booking: updated });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setDecisionError({ code: error.code, message: error.message });
+      } else {
+        setDecisionError({ code: "UNKNOWN", message: toErrorMessage(error) });
+      }
+    } finally {
+      setDeciding(null);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-5">
@@ -148,6 +178,54 @@ export default function BookingDetailPanel({
           <p className="whitespace-pre-line text-sm text-slate-700">
             {booking.additionalRequests}
           </p>
+        </div>
+      )}
+
+      {/* Host decision on a still-`requested` booking. State only updates after
+          the backend confirms the PATCH; errors are surfaced honestly. */}
+      {canDecide && (
+        <div className="flex flex-col gap-3 rounded-xl border border-slate-200 p-4">
+          <h2 className="text-sm font-semibold text-slate-900">
+            Respond to this request
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => decide("accepted")}
+              disabled={deciding !== null}
+            >
+              {deciding === "accepted" ? "Accepting…" : "Accept"}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => decide("rejected")}
+              disabled={deciding !== null}
+            >
+              {deciding === "rejected" ? "Rejecting…" : "Reject"}
+            </Button>
+          </div>
+          {decisionError && (
+            <div
+              role="alert"
+              className="flex flex-col gap-2 rounded-lg border border-red-200 bg-red-50 p-3"
+            >
+              <p className="flex items-center gap-2 text-sm font-semibold text-red-800">
+                <CircleAlert className="size-4" aria-hidden="true" />
+                {decisionError.message}
+              </p>
+              {(decisionError.code === "BOOKING_STATUS_NOT_ALLOWED" ||
+                decisionError.code === "NOT_FOUND") && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs text-red-700">
+                    This booking may have already been decided or changed.
+                    Refresh to see its current status.
+                  </p>
+                  <Button variant="outline" onClick={retry} className="w-fit">
+                    Refresh
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

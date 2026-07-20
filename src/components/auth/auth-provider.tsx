@@ -14,8 +14,12 @@ import {
   getSupabaseClient,
   isSupabaseConfigured,
 } from "@/lib/supabase/client";
-import { getCurrentUser, syncCurrentUser } from "@/lib/api/auth";
-import type { CurrentUser } from "@/lib/api/auth";
+import {
+  getCurrentUser,
+  syncCurrentUser,
+  updateCurrentUser,
+} from "@/lib/api/auth";
+import type { CurrentUser, UpdateCurrentUserInput } from "@/lib/api/auth";
 import { setAmbientAccessTokenGetter } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/client";
 
@@ -66,6 +70,8 @@ interface AuthContextValue {
   sendPasswordReset: (email: string) => Promise<ActionResult>;
   /** Re-run GET /auth/me for the current session. */
   refreshProfile: () => Promise<void>;
+  /** Saves the real MediCN profile and keeps the in-memory profile current. */
+  updateProfile: (input: UpdateCurrentUserInput) => Promise<CurrentUser>;
   /** Force a Supabase session/token refresh. */
   refreshSession: () => Promise<ActionResult>;
 }
@@ -248,6 +254,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [loadProfile]);
 
+  const updateProfile = useCallback(
+    async (input: UpdateCurrentUserInput) => {
+      const token = sessionRef.current?.access_token;
+      if (!token) {
+        throw new Error("Your session has expired. Please sign in again.");
+      }
+
+      const updated = await updateCurrentUser(input, token);
+      setUser(updated);
+      setProfileStatus("ready");
+      return updated;
+    },
+    []
+  );
+
   const refreshSession = useCallback(async (): Promise<ActionResult> => {
     if (!supabase) return { ok: false, message: NOT_CONFIGURED_MESSAGE };
     const { error } = await supabase.auth.refreshSession();
@@ -280,6 +301,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut,
       sendPasswordReset,
       refreshProfile,
+      updateProfile,
       refreshSession,
     }),
     [
@@ -293,6 +315,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut,
       sendPasswordReset,
       refreshProfile,
+      updateProfile,
       refreshSession,
     ]
   );

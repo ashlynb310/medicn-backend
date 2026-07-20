@@ -236,7 +236,10 @@ export default function ListingCreateForm() {
         </section>
 
         <div className="flex flex-wrap gap-2">
-          <ButtonLink href="/host/listings">Go to my listings</ButtonLink>
+          <ButtonLink href={`/listings/${created.id}`}>View listing</ButtonLink>
+          <ButtonLink href="/host/listings" variant="outline">
+            My listings
+          </ButtonLink>
           <Button
             variant="outline"
             onClick={() => window.location.reload()}

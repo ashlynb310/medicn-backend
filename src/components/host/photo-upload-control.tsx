@@ -7,9 +7,9 @@ import { useAuth } from "@/components/auth/auth-provider";
 import {
   addListingPhoto,
   createPresignedUpload,
-  uploadFileToSignedUrl,
 } from "@/lib/api/host-listings";
 import { ApiError, toErrorMessage } from "@/lib/api/client";
+import { uploadFileToSignedUrl } from "@/lib/api/uploads";
 import type { ListingPhotoRecord } from "@/lib/api/types";
 
 const ALLOWED = ["image/jpeg", "image/png", "image/webp"] as const;

@@ -37,6 +37,19 @@ export interface CurrentUser {
   currentVerificationStatus: VerificationStatus;
 }
 
+// Mirrors UpdateCurrentUserDto from the backend. Empty optional text fields
+// are sent as null by the account form so users can intentionally clear them.
+export interface UpdateCurrentUserInput {
+  firstName?: string | null;
+  lastName?: string | null;
+  displayName?: string | null;
+  healthcareRole?: HealthcareRole | null;
+  healthcareAffiliation?: string | null;
+  phoneNumber?: string | null;
+  bio?: string | null;
+  profilePhotoUrl?: string | null;
+}
+
 /**
  * GET /auth/me — returns the synced MediCN profile for the bearer token.
  * Throws ApiError with code "USER_NOT_SYNCED" (404) when the Supabase user has
@@ -54,6 +67,18 @@ export async function getCurrentUser(accessToken: string) {
 export async function syncCurrentUser(accessToken: string) {
   const { data } = await apiFetch<CurrentUser>("/auth/sync", {
     method: "POST",
+    accessToken,
+  });
+  return data;
+}
+
+export async function updateCurrentUser(
+  input: UpdateCurrentUserInput,
+  accessToken: string
+) {
+  const { data } = await apiFetch<CurrentUser>("/users/me", {
+    method: "PATCH",
+    body: input,
     accessToken,
   });
   return data;

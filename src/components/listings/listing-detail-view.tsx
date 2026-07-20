@@ -130,12 +130,7 @@ export default function ListingDetailView({
             </div>
           )}
           <AvailabilitySummary availability={listing.availability} />
-          <ListingMapPreview
-            city={listing.city}
-            address={listing.address}
-            latitude={listing.latitude}
-            longitude={listing.longitude}
-          />
+          <ListingMapPreview publicLocation={listing.publicLocation} />
         </aside>
       </div>
     </article>

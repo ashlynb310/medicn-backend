@@ -243,14 +243,6 @@ function ProfileEditor({
     }
   };
 
-  const handleProfilePhotoChange = async (profilePhotoUrl: string | null) => {
-    setFormError(null);
-    setSaved(false);
-    const updated = await onSave({ profilePhotoUrl });
-    setValues(toFormValues(updated));
-    setSaved(true);
-  };
-
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-3 rounded-lg border border-slate-200 p-5">
@@ -289,7 +281,6 @@ function ProfileEditor({
       <ProfilePhotoUpload
         currentPhotoUrl={user.profilePhotoUrl}
         fallbackLabel={user.displayName || user.firstName || email || "Account"}
-        onChange={handleProfilePhotoChange}
       />
 
       <form

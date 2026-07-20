@@ -5,22 +5,26 @@ import { formatDate, formatEnumLabel } from "@/lib/listing-format";
 export default function AvailabilitySummary({
   availability,
 }: {
-  availability: ListingAvailabilityWindow[];
+  // Publishable windows are returned only in the owner/admin projection. Public
+  // visitors get undefined here (their unavailable dates come from the public
+  // calendar endpoint in a later phase).
+  availability?: ListingAvailabilityWindow[];
 }) {
+  const windows = availability ?? [];
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-slate-200 p-4">
       <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
         <CalendarDays className="size-5" aria-hidden="true" />
         Availability
       </h2>
-      {availability.length === 0 ? (
+      {windows.length === 0 ? (
         <p className="text-sm text-slate-600">
           No availability windows are published for this listing yet. Contact
           the host for dates.
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {availability.map((window) => (
+          {windows.map((window) => (
             <li
               key={window.id}
               className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm"

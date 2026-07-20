@@ -2,7 +2,6 @@ import { apiFetch } from "./client";
 import type {
   CreatedListing,
   CreateListingInput,
-  ListingPhotoRecord,
   ListingStatus,
   ListingSummary,
   PaginationMeta,
@@ -56,7 +55,15 @@ export async function createListing(
   return data;
 }
 
-/** POST /api/v1/uploads/presigned-url — get a signed storage upload URL. */
+/**
+ * POST /api/v1/uploads/presigned-url — get a signed storage upload URL and an
+ * upload-intent id. After the storage PUT, call completeUpload(uploadIntentId)
+ * (src/lib/api/uploads.ts) so the media processor can produce the ready photo.
+ *
+ * Note: POST /listings/:id/photos no longer registers a storagePath directly —
+ * the backend returns MEDIA_PROCESSING_REQUIRED and publishes photos only
+ * through the processor. Use the intent/complete flow instead.
+ */
 export async function createPresignedUpload(
   input: {
     purpose: "listing_photo";
@@ -71,23 +78,5 @@ export async function createPresignedUpload(
     body: input,
     accessToken,
   });
-  return data;
-}
-
-/**
- * Uploads a file to the Supabase signed upload URL returned by
- * createPresignedUpload. The token is embedded in the URL, so no Authorization
- * header is sent. Throws ApiError on a non-2xx storage response.
- */
-/** POST /api/v1/listings/:id/photos — register an uploaded photo's storagePath. */
-export async function addListingPhoto(
-  listingId: string,
-  input: { storagePath: string; displayOrder?: number },
-  accessToken?: string
-) {
-  const { data } = await apiFetch<ListingPhotoRecord>(
-    `/listings/${encodeURIComponent(listingId)}/photos`,
-    { method: "POST", body: input, accessToken }
-  );
   return data;
 }

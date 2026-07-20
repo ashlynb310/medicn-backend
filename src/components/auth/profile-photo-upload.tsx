@@ -1,11 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import {
-  CheckCircle2,
-  Trash2,
-  Upload,
-} from "lucide-react";
+import { Loader2, Trash2, Upload } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,10 +9,13 @@ import {
   createProfilePhotoPresignedUpload,
   type ProfilePhotoContentType,
 } from "@/lib/api/profile-photo";
+import { deleteProfilePhoto } from "@/lib/api/auth";
 import { ApiError, toErrorMessage } from "@/lib/api/client";
-import { uploadFileToSignedUrl } from "@/lib/api/uploads";
+import { completeUpload, uploadFileToSignedUrl } from "@/lib/api/uploads";
 import { avatarColorClass, avatarInitials } from "@/lib/avatar";
 
+// Client MIME/size checks below are usability guards only — the backend media
+// pipeline is authoritative.
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 function isAllowedType(type: string): type is ProfilePhotoContentType {
@@ -27,24 +26,30 @@ function isRenderableImageUrl(value: string | null): value is string {
   return !!value && (value.startsWith("https://") || value.startsWith("http://"));
 }
 
+// Profile-photo upload using the backend media pipeline:
+//   POST /uploads/presigned-url -> PUT to storage -> POST /uploads/:id/complete.
+// The processed avatar is published asynchronously by the backend; a successful
+// upload is "processing", not "ready". We refresh the profile so the processed
+// photo appears once ready and never write a browser-provided URL via the
+// profile API (external profile-photo URLs are rejected by the backend).
 export default function ProfilePhotoUpload({
   currentPhotoUrl,
   fallbackLabel,
-  onChange,
 }: {
   currentPhotoUrl: string | null;
   fallbackLabel: string;
-  onChange: (profilePhotoUrl: string | null) => Promise<void>;
 }) {
-  const { accessToken } = useAuth();
+  const { accessToken, refreshProfile } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [removed, setRemoved] = useState(false);
 
   const handleFile = async (file: File) => {
     setError(null);
-    setSuccess(false);
+    setProcessing(false);
+    setRemoved(false);
     if (!isAllowedType(file.type)) {
       setError("Choose a JPEG, PNG, or WebP image.");
       return;
@@ -56,13 +61,16 @@ export default function ProfilePhotoUpload({
 
     setIsUploading(true);
     try {
+      const token = accessToken ?? undefined;
       const presigned = await createProfilePhotoPresignedUpload(
         { fileName: file.name, contentType: file.type },
-        accessToken ?? undefined
+        token
       );
       await uploadFileToSignedUrl(presigned.uploadUrl, file);
-      await onChange(presigned.fileUrl);
-      setSuccess(true);
+      await completeUpload(presigned.uploadIntentId, token);
+      setProcessing(true);
+      // Reflect the processed photo once the backend publishes it.
+      await refreshProfile();
     } catch (uploadError) {
       setError(
         uploadError instanceof ApiError
@@ -76,13 +84,19 @@ export default function ProfilePhotoUpload({
 
   const removePhoto = async () => {
     setError(null);
-    setSuccess(false);
+    setProcessing(false);
+    setRemoved(false);
     setIsUploading(true);
     try {
-      await onChange(null);
-      setSuccess(true);
+      await deleteProfilePhoto(accessToken ?? undefined);
+      await refreshProfile();
+      setRemoved(true);
     } catch (removeError) {
-      setError(toErrorMessage(removeError));
+      setError(
+        removeError instanceof ApiError
+          ? removeError.message
+          : toErrorMessage(removeError)
+      );
     } finally {
       setIsUploading(false);
     }
@@ -164,10 +178,15 @@ export default function ProfilePhotoUpload({
           {error}
         </p>
       )}
-      {success && (
-        <p role="status" className="flex items-center gap-1.5 text-sm text-green-700">
-          <CheckCircle2 className="size-4" aria-hidden="true" />
-          Profile photo updated
+      {processing && (
+        <p role="status" className="flex items-center gap-1.5 text-sm text-amber-700">
+          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          Photo uploaded — processing. It will appear once ready.
+        </p>
+      )}
+      {removed && (
+        <p role="status" className="text-sm text-slate-600">
+          Profile photo removed.
         </p>
       )}
     </section>

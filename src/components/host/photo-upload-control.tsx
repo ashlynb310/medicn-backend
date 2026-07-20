@@ -1,16 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ImageOff, Upload } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/auth/auth-provider";
-import {
-  addListingPhoto,
-  createPresignedUpload,
-} from "@/lib/api/host-listings";
+import { createPresignedUpload } from "@/lib/api/host-listings";
 import { ApiError, toErrorMessage } from "@/lib/api/client";
-import { uploadFileToSignedUrl } from "@/lib/api/uploads";
-import type { ListingPhotoRecord } from "@/lib/api/types";
+import { completeUpload, uploadFileToSignedUrl } from "@/lib/api/uploads";
+import type { UploadAsset } from "@/lib/api/types";
 
 const ALLOWED = ["image/jpeg", "image/png", "image/webp"] as const;
 type AllowedType = (typeof ALLOWED)[number];
@@ -19,15 +16,20 @@ function isAllowed(type: string): type is AllowedType {
   return (ALLOWED as readonly string[]).includes(type);
 }
 
-function isHttpUrl(url: string) {
-  return url.startsWith("https://") || url.startsWith("http://");
+interface UploadedItem {
+  intentId: string;
+  fileName: string;
+  status: UploadAsset["status"];
+  rejectionCode: string | null;
 }
 
-/**
- * Real photo upload for a created listing using the backend's presigned-URL
- * flow: POST /uploads/presigned-url -> PUT file to storage -> POST
- * /listings/:id/photos. Success is only shown after all three steps succeed.
- */
+// Real listing-photo upload using the backend media pipeline:
+//   POST /uploads/presigned-url -> PUT file to storage -> POST
+//   /uploads/:intentId/complete (queues processing).
+// A successful storage PUT means "uploaded", NOT publicly ready. The processed,
+// sanitized derivative is published asynchronously by the backend and appears on
+// the listing once ready — so this control shows an honest processing state and
+// never renders the local file as if it were a durable listing photo.
 export default function PhotoUploadControl({
   listingId,
 }: {
@@ -35,7 +37,7 @@ export default function PhotoUploadControl({
 }) {
   const { accessToken } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [photos, setPhotos] = useState<ListingPhotoRecord[]>([]);
+  const [items, setItems] = useState<UploadedItem[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,12 +60,16 @@ export default function PhotoUploadControl({
         token
       );
       await uploadFileToSignedUrl(presigned.uploadUrl, file);
-      const photo = await addListingPhoto(
-        listingId,
-        { storagePath: presigned.storagePath },
-        token
-      );
-      setPhotos((prev) => [...prev, photo]);
+      const asset = await completeUpload(presigned.uploadIntentId, token);
+      setItems((prev) => [
+        ...prev,
+        {
+          intentId: asset.id,
+          fileName: file.name,
+          status: asset.status,
+          rejectionCode: asset.rejectionCode,
+        },
+      ]);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -108,28 +114,42 @@ export default function PhotoUploadControl({
         </p>
       )}
 
-      {photos.length > 0 && (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {photos.map((photo) => (
+      {items.length > 0 && (
+        <ul className="flex flex-col gap-2">
+          {items.map((item) => (
             <li
-              key={photo.id}
-              className="overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
+              key={item.intentId}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
             >
-              {isHttpUrl(photo.fileUrl) ? (
-                // eslint-disable-next-line @next/next/no-img-element -- backend storage host is env-dependent
-                <img
-                  src={photo.fileUrl}
-                  alt="Uploaded listing photo"
-                  className="h-28 w-full object-cover"
-                />
+              <span className="truncate font-medium text-slate-800">
+                {item.fileName}
+              </span>
+              {item.status === "rejected" ? (
+                <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                  {item.rejectionCode
+                    ? `Rejected (${item.rejectionCode})`
+                    : "Rejected"}
+                </span>
+              ) : item.status === "ready" ? (
+                <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                  Ready
+                </span>
               ) : (
-                <div className="flex h-28 w-full items-center justify-center text-slate-400">
-                  <ImageOff className="size-6" aria-hidden="true" />
-                </div>
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                  <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+                  Processing
+                </span>
               )}
             </li>
           ))}
         </ul>
+      )}
+
+      {items.some((item) => item.status !== "rejected" && item.status !== "ready") && (
+        <p className="text-xs text-slate-500">
+          Uploaded photos are processed by MediCN before publishing. They appear
+          on your listing once ready.
+        </p>
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-import type { ApiErrorPayload, ApiResponse } from "./types";
+import type { ApiErrorCode, ApiErrorPayload, ApiResponse } from "./types";
 
 const DEFAULT_API_URL = "http://localhost:4100/api/v1";
 
@@ -8,16 +8,26 @@ export function getApiBaseUrl() {
 }
 
 export class ApiError extends Error {
-  readonly code: string;
+  readonly code: ApiErrorCode;
   readonly status: number;
   readonly details?: unknown;
+  /**
+   * Parsed `Retry-After` for a 429/503 (seconds). null when the header is
+   * absent or unparseable. The backend sets it for rate-limited responses.
+   */
+  readonly retryAfterSeconds: number | null;
 
-  constructor(payload: ApiErrorPayload, status: number) {
+  constructor(
+    payload: ApiErrorPayload,
+    status: number,
+    retryAfterSeconds: number | null = null
+  ) {
     super(payload.message);
     this.name = "ApiError";
     this.code = payload.code;
     this.status = status;
     this.details = payload.details;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -36,6 +46,26 @@ export interface ApiFetchOptions {
    */
   accessToken?: string | null;
   signal?: AbortSignal;
+  /**
+   * Sets the `Idempotency-Key` header. Required by the backend for retry-safe
+   * mutations (booking cancel, admin requeue/reconciliation). Callers generate
+   * a stable key per logical attempt so retries don't create duplicate work.
+   */
+  idempotencyKey?: string;
+}
+
+/** Parses a `Retry-After` header (delta-seconds form) into seconds. */
+function parseRetryAfter(header: string | null): number | null {
+  if (!header) return null;
+  const seconds = Number(header);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return seconds;
+  }
+  const dateMs = Date.parse(header);
+  if (!Number.isNaN(dateMs)) {
+    return Math.max(0, Math.round((dateMs - Date.now()) / 1000));
+  }
+  return null;
 }
 
 // Ambient token getter registered by the auth provider. Lets apiFetch attach
@@ -70,7 +100,8 @@ export async function apiFetch<TData, TMeta = Record<string, never>>(
   path: string,
   options: ApiFetchOptions = {}
 ): Promise<ApiResult<TData, TMeta>> {
-  const { method = "GET", query, body, accessToken, signal } = options;
+  const { method = "GET", query, body, accessToken, signal, idempotencyKey } =
+    options;
 
   // Omitted token -> ambient (logged-in) token; explicit null -> no auth header.
   const resolvedToken =
@@ -82,6 +113,9 @@ export async function apiFetch<TData, TMeta = Record<string, never>>(
   }
   if (resolvedToken) {
     headers["Authorization"] = `Bearer ${resolvedToken}`;
+  }
+  if (idempotencyKey) {
+    headers["Idempotency-Key"] = idempotencyKey;
   }
 
   let response: Response;
@@ -107,6 +141,8 @@ export async function apiFetch<TData, TMeta = Record<string, never>>(
     );
   }
 
+  const retryAfterSeconds = parseRetryAfter(response.headers.get("Retry-After"));
+
   let envelope: ApiResponse<TData, TMeta>;
   try {
     envelope = (await response.json()) as ApiResponse<TData, TMeta>;
@@ -116,12 +152,13 @@ export async function apiFetch<TData, TMeta = Record<string, never>>(
         code: "INVALID_RESPONSE",
         message: "The MediCN service returned an unexpected response.",
       },
-      response.status
+      response.status,
+      retryAfterSeconds
     );
   }
 
   if (envelope?.error) {
-    throw new ApiError(envelope.error, response.status);
+    throw new ApiError(envelope.error, response.status, retryAfterSeconds);
   }
 
   if (!response.ok || envelope?.data === undefined) {
@@ -130,7 +167,8 @@ export async function apiFetch<TData, TMeta = Record<string, never>>(
         code: "INVALID_RESPONSE",
         message: "The MediCN service returned an unexpected response.",
       },
-      response.status
+      response.status,
+      retryAfterSeconds
     );
   }
 

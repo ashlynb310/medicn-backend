@@ -2,8 +2,88 @@
 // listings DTOs returned by apps/api (see ListingsService.toListingSummaryDto
 // and toListingDetailDto).
 
+// Backend-issued error codes (mirrors packages/types/src/index.ts ApiErrorCode).
+// Kept in sync manually; the frontend never invents codes the backend can send.
+export type BackendApiErrorCode =
+  | "ACCOUNT_DISABLED"
+  | "UNAUTHORIZED"
+  | "FORBIDDEN"
+  | "NOT_FOUND"
+  | "VALIDATION_ERROR"
+  | "INVALID_SUPABASE_TOKEN"
+  | "USER_NOT_SYNCED"
+  | "EMAIL_NOT_VERIFIED"
+  | "INQUIRY_NOT_AVAILABLE"
+  | "INQUIRY_ALREADY_OPEN"
+  | "INQUIRY_CLOSED"
+  | "CONTACT_INFORMATION_NOT_ALLOWED"
+  | "BOOKING_STATUS_NOT_ALLOWED"
+  | "CONNECT_NOT_CONFIGURED"
+  | "CONNECT_ONBOARDING_REQUIRED"
+  | "HOST_PAYOUT_ACCOUNT_NOT_READY"
+  | "IDENTITY_VERIFICATION_EXPIRED"
+  | "IDENTITY_VERIFICATION_PENDING"
+  | "IDENTITY_VERIFICATION_REJECTED"
+  | "IDENTITY_VERIFICATION_REQUIRED"
+  | "LISTING_LOCATION_CHANGE_BLOCKED"
+  | "LISTING_ARCHIVE_BLOCKED_BY_ACTIVE_BOOKINGS"
+  | "LISTING_LOCATION_INVALID"
+  | "LISTING_LOCATION_NOT_READY"
+  | "LISTING_STATUS_NOT_ALLOWED"
+  | "MEDIA_INPUT_TOO_LARGE"
+  | "MEDIA_NOT_CONFIGURED"
+  | "MEDIA_PROCESSING_REQUIRED"
+  | "MEDIA_STORAGE_UNAVAILABLE"
+  | "MEDIA_UPLOAD_EXPIRED"
+  | "MEDIA_UPLOAD_LIMIT_REACHED"
+  | "MEDIA_UPLOAD_OBJECT_MISSING"
+  | "TRANSFER_ALREADY_RELEASED"
+  | "TRANSFER_FAILED"
+  | "TRANSFER_NOT_ELIGIBLE"
+  | "VERIFF_NOT_CONFIGURED"
+  | "VERIFF_PROVIDER_UNAVAILABLE"
+  | "VERIFICATION_REQUIRED"
+  | "LISTING_NOT_AVAILABLE"
+  | "BOOKING_NOT_AVAILABLE"
+  | "AVAILABILITY_RANGE_INVALID"
+  | "AVAILABILITY_CONFLICTS_WITH_RESERVATION"
+  | "AVAILABILITY_DEDICATED_ENDPOINT_REQUIRED"
+  | "CALENDAR_RANGE_TOO_LARGE"
+  | "LISTING_TIMEZONE_INVALID"
+  | "BOOKING_CANCELLATION_NOT_ALLOWED"
+  | "PAID_CANCELLATION_POLICY_UNAVAILABLE"
+  | "CANCELLATION_ALREADY_IN_PROGRESS"
+  | "PAYMENT_STATE_CHANGED"
+  | "PAYMENT_PROVIDER_UNAVAILABLE"
+  | "PAYMENT_FAILED"
+  | "OPERATIONAL_DATE_RANGE_INVALID"
+  | "OPERATIONAL_COMMAND_INVALID"
+  | "OPERATIONAL_IDEMPOTENCY_CONFLICT"
+  | "JOB_EXECUTION_NOT_REQUEUEABLE"
+  | "RECONCILIATION_SCOPE_INVALID"
+  | "RATE_LIMITED"
+  | "RATE_LIMIT_EXCEEDED"
+  | "RATE_LIMIT_UNAVAILABLE"
+  | "PAYLOAD_TOO_LARGE"
+  | "INTERNAL_SERVER_ERROR";
+
+// Codes the frontend client itself raises for transport-level failures that
+// never reach the backend envelope.
+export type ClientApiErrorCode =
+  | "NETWORK_ERROR"
+  | "INVALID_RESPONSE"
+  | "UPLOAD_NETWORK_ERROR"
+  | "UPLOAD_FAILED";
+
+// `(string & {})` keeps autocomplete for known codes while still accepting any
+// future backend code without a frontend type break.
+export type ApiErrorCode =
+  | BackendApiErrorCode
+  | ClientApiErrorCode
+  | (string & {});
+
 export interface ApiErrorPayload {
-  code: string;
+  code: ApiErrorCode;
   message: string;
   details?: unknown;
 }
@@ -16,6 +96,7 @@ export interface PaginationMeta {
   page: number;
   limit: number;
   total: number;
+  totalPages: number;
 }
 
 export type PriceUnit = "day" | "night" | "month";
@@ -44,6 +125,43 @@ export interface ListingHostDetail extends ListingHostSummary {
   profilePhotoUrl: string | null;
 }
 
+// Public, deliberately coarse location. Backend returns this for every viewer.
+// Never a street address, unit, exact pin, or exact Place ID.
+export interface PublicListingLocation {
+  city: string;
+  latitude: number | null;
+  longitude: number | null;
+  radiusMeters: number;
+  precision: "approximate";
+}
+
+// Exact location. Backend returns this only in an owner/admin listing
+// projection (canViewExactLocation); it is null for ordinary public viewers.
+export interface ExactListingLocation {
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export interface ListingLocationStatus {
+  geocode: string;
+  enrichment: string;
+  // Only present in the owner/admin projection.
+  addressVersion?: number | null;
+  failureCategory?: string | null;
+}
+
+export interface ListingNearbyPlace {
+  category: string;
+  name: string;
+  mapsUrl: string | null;
+  approximateDistanceMeters: number | null;
+  routeDistanceMeters: number | null;
+  routeDurationSeconds: number | null;
+  travelMode: string | null;
+  dataUpdatedAt: string;
+}
+
 export interface ListingSummary {
   id: string;
   title: string;
@@ -52,6 +170,8 @@ export interface ListingSummary {
   currency: string;
   priceUnit: PriceUnit;
   status: string;
+  publicLocation: PublicListingLocation;
+  exactLocation: ExactListingLocation | null;
   coverPhotoUrl: string | null;
   stayDurations: StayDuration[];
   host: ListingHostSummary;
@@ -61,6 +181,8 @@ export interface ListingPhoto {
   id: string;
   fileUrl: string;
   displayOrder: number;
+  // Backend marks pre-pipeline photos "legacy"; processed derivatives "processed".
+  source?: "processed" | "legacy";
 }
 
 export interface ListingAvailabilityWindow {
@@ -83,17 +205,22 @@ export interface ListingPlace {
 
 export interface ListingDetail extends ListingSummary {
   description: string;
-  address: string | null;
-  latitude: number | null;
-  longitude: number | null;
   listingType: ListingType;
   category: string | null;
   proximityTags: string[];
   specialFeatures: string[];
   createdAt: string;
   updatedAt: string;
+  timeZone: string;
+  // Only in the owner/admin projection (canViewExactLocation).
+  checkoutTime?: string;
+  locationStatus: ListingLocationStatus;
+  nearbyPlaces: ListingNearbyPlace[];
   photos: ListingPhoto[];
-  availability: ListingAvailabilityWindow[];
+  // Publishable availability windows are returned only in the owner/admin
+  // projection. Public visitors read unavailable dates from the calendar
+  // endpoint instead (a later phase), so this is optional.
+  availability?: ListingAvailabilityWindow[];
   places: ListingPlace[];
   host: ListingHostDetail;
 }
@@ -143,7 +270,51 @@ export interface BookingListingRef {
   host: BookingPartyRef;
 }
 
-// Mirrors BookingsService.toBookingDto.
+// Source that drove an automated lifecycle transition (expiry/completion).
+export type BookingLifecycleSource = "operations_scheduler" | "legacy_backfill";
+
+export type CancellationActorType = "renter" | "host" | "admin" | "system";
+export type CancellationOperationStatus =
+  | "requested"
+  | "checkout_expiry_pending"
+  | "refund_pending"
+  | "refund_confirmed"
+  | "transfer_reversal_pending"
+  | "completed"
+  | "failed_retryable"
+  | "failed_permanent";
+export type CancellationFinancialDisposition =
+  | "no_payment_collected"
+  | "checkout_expiry_pending"
+  | "full_refund_pending"
+  | "full_refund_confirmed"
+  | "transfer_reversal_pending"
+  | "financially_complete";
+
+export interface BookingCancellationSummary {
+  id: string;
+  actorType: CancellationActorType;
+  reason: string;
+  status: CancellationOperationStatus;
+  financialDisposition: CancellationFinancialDisposition;
+  requestedAt: string;
+  effectiveAt: string | null;
+}
+
+// Exact check-in location. The backend includes this in a booking DETAIL
+// response only when the viewer is authorized (host/admin, or the renter of a
+// paid/completed booking with a settled, non-revoked payment). Never inferred
+// from frontend state.
+export interface CheckInLocation {
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+  sourceListingLocationVersion: number | null;
+  capturedAt: string | null;
+}
+
+// Mirrors BookingsService.toBookingDto. `checkInLocation` and `cancellation`
+// are present only on the detail response (GET /bookings/:id).
 export interface Booking {
   id: string;
   listingId: string;
@@ -152,12 +323,23 @@ export interface Booking {
   status: BookingStatus;
   startDate: string;
   endDate: string;
+  timeZone: string;
+  checkoutTime: string;
+  requestExpiresAt: string;
+  expiredAt: string | null;
+  expirySource: BookingLifecycleSource | null;
+  completedAt: string | null;
+  completionSource: BookingLifecycleSource | null;
   selectedOption: string;
   additionalRequests: string | null;
   totalAmountCents: number;
   currency: string;
+  cancellationReason: string | null;
+  cancelledAt: string | null;
   createdAt: string;
   updatedAt: string;
+  checkInLocation?: CheckInLocation | null;
+  cancellation?: BookingCancellationSummary | null;
   listing: BookingListingRef;
   renter: BookingPartyRef;
 }
@@ -183,12 +365,18 @@ export interface ListingAvailabilityInput {
 }
 
 // Matches CreateListingDto exactly. Fields the DTO does not declare must NOT be
-// sent — the backend ValidationPipe uses forbidNonWhitelisted.
+// sent — the backend ValidationPipe uses forbidNonWhitelisted. `timeZone` is
+// required by the backend. `placeId` is the selected-address contract; the
+// backend resolves authoritative coordinates, so browser lat/long are not
+// authoritative even though the DTO still accepts them for compatibility.
 export interface CreateListingInput {
   title: string;
   description: string;
   city: string;
+  timeZone: string;
   address?: string;
+  placeId?: string;
+  checkoutTime?: string;
   latitude?: number;
   longitude?: number;
   priceCents: number;
@@ -209,19 +397,47 @@ export interface CreatedListing {
   status: ListingStatus;
 }
 
-// POST /uploads/presigned-url response.
+// POST /uploads/presigned-url response (MediaService.createIntent). There is no
+// `fileUrl`: a durable, renderable URL exists only after the media processor
+// produces a ready derivative.
 export interface PresignedUpload {
+  uploadIntentId: string;
   uploadUrl: string;
-  fileUrl: string;
   storagePath: string;
+  expiresAt: string;
+  maxBytes: number;
 }
 
-// POST /listings/:id/photos response.
-export interface ListingPhotoRecord {
+// MediaAssetStatus (prisma enum). A successful storage PUT reaches
+// `uploaded`/`pending_upload`; only `ready` yields renderable derivatives.
+export type UploadAssetStatus =
+  | "pending_upload"
+  | "uploaded"
+  | "processing"
+  | "ready"
+  | "rejected"
+  | "deleted";
+
+export interface UploadAssetVariant {
+  type: string;
+  url: string;
+  width: number | null;
+  height: number | null;
+  contentType: string;
+}
+
+// GET /uploads/:intentId and POST /uploads/:intentId/complete response
+// (MediaService.getSafeAsset).
+export interface UploadAsset {
   id: string;
-  storagePath: string;
-  fileUrl: string;
-  displayOrder: number;
+  purpose: string;
+  listingId: string | null;
+  status: UploadAssetStatus;
+  expiresAt: string;
+  uploadedAt: string | null;
+  processedAt: string | null;
+  rejectionCode: string | null;
+  variants: UploadAssetVariant[];
 }
 
 // --- Admin moderation (see medicn/apps/api/src/admin) ---
@@ -245,6 +461,8 @@ export interface AdminListing {
   currency: string;
   priceUnit: PriceUnit;
   status: ListingStatus;
+  // Backend geocode status for the listing's location (safe summary only).
+  locationStatus?: string;
   coverPhotoUrl: string | null;
   createdAt: string;
   updatedAt: string;

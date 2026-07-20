@@ -101,6 +101,16 @@ export default function ListingCreateForm() {
   const [address, setAddress] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
+  // timeZone is required by the backend. Default to the browser's IANA zone as
+  // a confirmable suggestion (a display/scheduling default, not a privacy-
+  // sensitive authoritative coordinate). The host can correct it.
+  const [timeZone, setTimeZone] = useState(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    } catch {
+      return "UTC";
+    }
+  });
   const [price, setPrice] = useState("");
   const [priceUnit, setPriceUnit] = useState("night");
   const [listingType, setListingType] = useState("private_room");
@@ -138,6 +148,7 @@ export default function ListingCreateForm() {
     if (!price || !Number.isFinite(priceValue) || priceValue < 0) {
       return "Enter a valid price.";
     }
+    if (!timeZone.trim()) return "Add a time zone (e.g. America/Chicago).";
     for (const row of availability) {
       if (!row.startDate || !row.endDate) {
         return "Each availability window needs a start and end date.";
@@ -160,6 +171,7 @@ export default function ListingCreateForm() {
       title: title.trim(),
       description: description.trim(),
       city: city.trim(),
+      timeZone: timeZone.trim(),
       priceCents: Math.round(Number(price) * 100),
       priceUnit: priceUnit as CreateListingInput["priceUnit"],
       listingType: listingType as CreateListingInput["listingType"],
@@ -358,17 +370,30 @@ export default function ListingCreateForm() {
           title="Location"
           description="Coordinates are geocoded by the backend when omitted."
         />
-        <FormField label="City" required>
-          {({ id }) => (
-            <Input
-              id={id}
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              maxLength={120}
-              placeholder="Houston"
-            />
-          )}
-        </FormField>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField label="City" required>
+            {({ id }) => (
+              <Input
+                id={id}
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                maxLength={120}
+                placeholder="Houston"
+              />
+            )}
+          </FormField>
+          <FormField label="Time zone" required>
+            {({ id }) => (
+              <Input
+                id={id}
+                value={timeZone}
+                onChange={(e) => setTimeZone(e.target.value)}
+                maxLength={64}
+                placeholder="America/Chicago"
+              />
+            )}
+          </FormField>
+        </div>
         <FormField label="Address">
           {({ id }) => (
             <Input

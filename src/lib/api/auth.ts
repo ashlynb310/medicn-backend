@@ -18,6 +18,26 @@ export type VerificationStatus =
   | "rejected"
   | "expired";
 
+export type IdentityVerificationStatus =
+  | "not_started"
+  | "created"
+  | "submitted"
+  | "review"
+  | "resubmission_requested"
+  | "approved"
+  | "declined"
+  | "expired"
+  | "abandoned";
+
+export type IdentityVerificationAction =
+  | "start"
+  | "continue"
+  | "wait"
+  | "resubmit"
+  | "none"
+  | "retry";
+
+// Mirrors CurrentUserDto (packages/types + auth.service.toCurrentUserDto).
 export interface CurrentUser {
   id: string;
   supabaseUserId: string;
@@ -32,9 +52,21 @@ export interface CurrentUser {
   phoneNumber: string | null;
   bio: string | null;
   profilePhotoUrl: string | null;
+  profilePhoto: { url: string; source: "processed" | "legacy" } | null;
   roles: AppUserRole[];
   profileComplete: boolean;
+  /** @deprecated Healthcare-verification status only; use healthcareVerification.status. */
   currentVerificationStatus: VerificationStatus;
+  healthcareVerification: { status: VerificationStatus };
+  identityVerification: {
+    status: IdentityVerificationStatus;
+    provider: "veriff";
+    submittedAt: string | null;
+    decidedAt: string | null;
+    expiresAt: string | null;
+    canRetry: boolean;
+    actionRequired: IdentityVerificationAction;
+  };
 }
 
 // Mirrors UpdateCurrentUserDto from the backend. Empty optional text fields
@@ -81,5 +113,19 @@ export async function updateCurrentUser(
     body: input,
     accessToken,
   });
+  return data;
+}
+
+/**
+ * DELETE /users/me/profile-photo — removes the current user's profile photo.
+ * The backend owns processed-media storage, so removal goes through this
+ * dedicated endpoint rather than PATCH /users/me with a URL. It returns the
+ * media-asset deletion result; callers refresh the profile separately.
+ */
+export async function deleteProfilePhoto(accessToken?: string) {
+  const { data } = await apiFetch<{ id: string | null; status: string }>(
+    "/users/me/profile-photo",
+    { method: "DELETE", accessToken }
+  );
   return data;
 }

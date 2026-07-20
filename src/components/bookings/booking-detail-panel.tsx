@@ -2,29 +2,51 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { SearchX } from "lucide-react";
+import { CircleAlert, SearchX } from "lucide-react";
 import EmptyState from "@/components/ui/empty-state";
 import ErrorState from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button-link";
 import { BookingStatusBadge } from "@/components/ui/status-badge";
-import { CircleAlert } from "lucide-react";
+import CheckoutButton from "@/components/bookings/checkout-button";
+import BookingCancelControl from "@/components/bookings/booking-cancel-control";
+import PaymentSummaryPanel from "@/components/bookings/payment-summary-panel";
+import BookingCheckinLocation from "@/components/bookings/booking-checkin-location";
 import { useAuth } from "@/components/auth/auth-provider";
 import { getBooking, updateBookingStatus } from "@/lib/api/bookings";
 import { ApiError, toErrorMessage } from "@/lib/api/client";
 import type { Booking } from "@/lib/api/types";
 import { formatPrice, formatDate, formatEnumLabel } from "@/lib/listing-format";
 import { nightsBetween } from "@/lib/booking-format";
+import {
+  canRenterCheckout,
+  describeBookingLifecycle,
+  formatInstantInZone,
+  type LifecycleTone,
+} from "@/lib/booking-lifecycle";
 
 type State =
   | { status: "loading" }
   | { status: "error"; code: string; message: string }
   | { status: "ready"; booking: Booking };
 
-// Checkout is only meaningful once a host accepts (accepted / payment_pending).
-// Stripe checkout is a later phase, so the control is shown disabled and honest.
-const CHECKOUTABLE = new Set(["accepted", "payment_pending"]);
+const TONE_CLASS: Record<LifecycleTone, string> = {
+  neutral: "border-slate-200 bg-slate-50 text-slate-700",
+  info: "border-sky-200 bg-sky-50 text-sky-900",
+  warning: "border-amber-200 bg-amber-50 text-amber-900",
+  success: "border-green-200 bg-green-50 text-green-900",
+  danger: "border-red-200 bg-red-50 text-red-900",
+};
+
+// Statuses for which a payment summary is meaningful.
+const PAYMENT_RELEVANT = new Set([
+  "accepted",
+  "payment_pending",
+  "paid",
+  "completed",
+  "cancelled",
+]);
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -56,22 +78,17 @@ export default function BookingDetailPanel({
       .catch((error) => {
         if (controller.signal.aborted) return;
         if (error instanceof ApiError) {
-          setState({
-            status: "error",
-            code: error.code,
-            message: error.message,
-          });
+          setState({ status: "error", code: error.code, message: error.message });
         } else {
-          setState({
-            status: "error",
-            code: "UNKNOWN",
-            message: toErrorMessage(error),
-          });
+          setState({ status: "error", code: "UNKNOWN", message: toErrorMessage(error) });
         }
       });
     return () => controller.abort();
   }, [bookingId, accessToken, attempt]);
 
+  // Soft refetch (no skeleton flash) — used after cancellation or a stale-state
+  // prompt. `retry` resets to a full loading state for the error view.
+  const refetch = () => setAttempt((n) => n + 1);
   const retry = () => {
     setDecisionError(null);
     setState({ status: "loading" });
@@ -113,18 +130,21 @@ export default function BookingDetailPanel({
 
   const { booking } = state;
   const isHost = user?.id === booking.hostId;
+  const isRenter = user?.id === booking.renterId;
   const counterpart = isHost ? booking.renter : booking.listing.host;
   const counterpartName =
     counterpart.displayName || counterpart.firstName || counterpart.email;
   const nights = nightsBetween(booking.startDate, booking.endDate);
-  const canCheckout = CHECKOUTABLE.has(booking.status);
   const canDecide = isHost && booking.status === "requested";
+  // Checkout is renter-only; admins/other viewers never inherit it.
+  const showCheckout = isRenter && canRenterCheckout(booking);
+  const lifecycle = describeBookingLifecycle(booking, booking.timeZone);
+  const cancellation = booking.cancellation;
 
   const decide = async (next: "accepted" | "rejected") => {
     setDecisionError(null);
     setDeciding(next);
     try {
-      // Only reflect the new status after the backend confirms the decision.
       const updated = await updateBookingStatus(
         booking.id,
         next,
@@ -154,10 +174,19 @@ export default function BookingDetailPanel({
         <BookingStatusBadge status={booking.status} />
       </div>
 
+      {/* Authoritative lifecycle banner (from backend fields, never inferred). */}
+      <div className={`flex flex-col gap-1 rounded-xl border p-4 ${TONE_CLASS[lifecycle.tone]}`}>
+        <span className="text-sm font-semibold">{lifecycle.label}</span>
+        {lifecycle.detail && <p className="text-sm">{lifecycle.detail}</p>}
+      </div>
+
       <dl className="rounded-xl border border-slate-200 p-4">
         <Row label="Dates">
           {formatDate(booking.startDate)} – {formatDate(booking.endDate)} ·{" "}
           {nights} {booking.listing.priceUnit === "month" ? "day(s)" : "night(s)"}
+        </Row>
+        <Row label="Check-out time">
+          {booking.checkoutTime} · {booking.timeZone}
         </Row>
         <Row label="Stay option">{formatEnumLabel(booking.selectedOption)}</Row>
         <Row label={isHost ? "Renter" : "Host"}>{counterpartName}</Row>
@@ -165,34 +194,73 @@ export default function BookingDetailPanel({
           {formatPrice(booking.totalAmountCents, booking.currency)}
         </Row>
         <Row label="Requested on">{formatDate(booking.createdAt)}</Row>
+        {booking.completedAt && (
+          <Row label="Completed">
+            {formatInstantInZone(booking.completedAt, booking.timeZone)}
+            {booking.completionSource
+              ? ` · ${formatEnumLabel(booking.completionSource)}`
+              : ""}
+          </Row>
+        )}
         <Row label="Reference">
           <span className="font-mono text-xs">{booking.id}</span>
         </Row>
       </dl>
 
+      {/* Cancellation operation summary — safe fields only (no provider refs). */}
+      {cancellation && (
+        <div className="flex flex-col gap-1.5 rounded-xl border border-slate-200 p-4">
+          <h2 className="text-sm font-semibold text-slate-900">Cancellation</h2>
+          <dl className="flex flex-col gap-0.5 text-sm text-slate-600">
+            <div className="flex justify-between gap-2">
+              <dt>Reason</dt>
+              <dd className="font-medium text-slate-900">
+                {formatEnumLabel(booking.cancellationReason ?? cancellation.reason)}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt>Status</dt>
+              <dd className="font-medium text-slate-900">
+                {formatEnumLabel(cancellation.status)}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt>Financial disposition</dt>
+              <dd className="font-medium text-slate-900">
+                {formatEnumLabel(cancellation.financialDisposition)}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt>Requested</dt>
+              <dd>{formatInstantInZone(cancellation.requestedAt, booking.timeZone)}</dd>
+            </div>
+            {cancellation.effectiveAt && (
+              <div className="flex justify-between gap-2">
+                <dt>Effective</dt>
+                <dd>{formatInstantInZone(cancellation.effectiveAt, booking.timeZone)}</dd>
+              </div>
+            )}
+          </dl>
+        </div>
+      )}
+
       {booking.additionalRequests && (
         <div className="flex flex-col gap-1.5 rounded-xl border border-slate-200 p-4">
-          <h2 className="text-sm font-semibold text-slate-900">
-            Message to host
-          </h2>
+          <h2 className="text-sm font-semibold text-slate-900">Message to host</h2>
           <p className="whitespace-pre-line text-sm text-slate-700">
             {booking.additionalRequests}
           </p>
         </div>
       )}
 
-      {/* Host decision on a still-`requested` booking. State only updates after
-          the backend confirms the PATCH; errors are surfaced honestly. */}
+      {/* Host decision on a still-`requested` booking (preserved from F1). */}
       {canDecide && (
         <div className="flex flex-col gap-3 rounded-xl border border-slate-200 p-4">
           <h2 className="text-sm font-semibold text-slate-900">
             Respond to this request
           </h2>
           <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={() => decide("accepted")}
-              disabled={deciding !== null}
-            >
+            <Button onClick={() => decide("accepted")} disabled={deciding !== null}>
               {deciding === "accepted" ? "Accepting…" : "Accept"}
             </Button>
             <Button
@@ -229,28 +297,36 @@ export default function BookingDetailPanel({
         </div>
       )}
 
-      {/* Payment is a later phase. Show the control only when the status makes
-          checkout meaningful, and keep it honestly disabled. */}
-      {!isHost && (
+      {/* Exact check-in location — ONLY when the protected response included it. */}
+      {booking.checkInLocation && (
+        <BookingCheckinLocation location={booking.checkInLocation} />
+      )}
+
+      {/* Renter checkout — only when the authoritative state allows it. */}
+      {showCheckout && (
         <div className="flex flex-col gap-2 rounded-xl border border-slate-200 p-4">
           <h2 className="text-sm font-semibold text-slate-900">Payment</h2>
-          {canCheckout ? (
-            <>
-              <Button disabled className="w-fit">
-                Continue to payment
-              </Button>
-              <p className="text-xs text-slate-500">
-                Secure checkout is coming in a later phase. Amounts are
-                calculated by the backend, not the browser.
-              </p>
-            </>
-          ) : (
-            <p className="text-sm text-slate-600">
-              Payment becomes available after the host accepts your request.
-            </p>
-          )}
+          <CheckoutButton bookingId={booking.id} />
         </div>
       )}
+
+      {/* Authoritative payment summary. */}
+      {PAYMENT_RELEVANT.has(booking.status) && (
+        <PaymentSummaryPanel
+          bookingId={booking.id}
+          timeZone={booking.timeZone}
+          isHost={isHost}
+        />
+      )}
+
+      {/* Cancellation control (self-hides when not eligible). */}
+      <BookingCancelControl
+        booking={booking}
+        isRenter={isRenter}
+        isHost={isHost}
+        onCancelled={refetch}
+        onRefresh={refetch}
+      />
     </div>
   );
 }

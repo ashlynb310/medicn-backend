@@ -394,6 +394,112 @@ export interface BookingListMeta {
   total: number;
 }
 
+// --- Cancellation (POST /bookings/:id/cancel) ---
+
+// Full set the backend accepts (CancelBookingDto). The frontend only OFFERS the
+// role-appropriate subsets below; it never sends actor IDs, amounts, or
+// financial instructions — only `reason`.
+export type CancellationRequestReason =
+  | "plans_changed"
+  | "booking_no_longer_needed"
+  | "property_unavailable"
+  | "cannot_accommodate"
+  | "safety_issue"
+  | "support_resolution"
+  | "fraud_risk"
+  | "provider_failure"
+  | "other";
+
+export const RENTER_CANCELLATION_REASONS: {
+  value: CancellationRequestReason;
+  label: string;
+}[] = [
+  { value: "plans_changed", label: "Plans changed" },
+  { value: "booking_no_longer_needed", label: "No longer needed" },
+  { value: "other", label: "Other" },
+];
+
+export const HOST_CANCELLATION_REASONS: {
+  value: CancellationRequestReason;
+  label: string;
+}[] = [
+  { value: "property_unavailable", label: "Property unavailable" },
+  { value: "cannot_accommodate", label: "Cannot accommodate" },
+  { value: "safety_issue", label: "Safety issue" },
+  { value: "other", label: "Other" },
+];
+
+// Response of POST /bookings/:id/cancel (BookingCancellationsService.toResult).
+export interface BookingCancellationResult {
+  bookingId: string;
+  bookingStatus: BookingStatus;
+  cancellation: BookingCancellationSummary;
+}
+
+// --- Payment summary (GET /bookings/:id/payment-summary) ---
+
+export type SafePaymentLifecycleStatus =
+  | "pending"
+  | "paid"
+  | "failed"
+  | "expired"
+  | "partially_refunded"
+  | "refunded"
+  | "disputed";
+
+export interface PaymentAttempt {
+  id: string;
+  attemptNumber: number;
+  status: SafePaymentLifecycleStatus;
+  amountCents: number;
+  amountRefundedCents: number;
+  currency: string;
+  active: boolean;
+  expiresAt: string | null;
+  paidAt: string | null;
+  refundedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// A Stripe Transfer to the Host's connected Stripe balance. This is NOT a bank
+// payout and must never be labeled as one (representsBankPayout is always false).
+export interface HostTransferSummary {
+  status: string;
+  reversalStatus: string;
+  grossAmountCents: number;
+  platformFeeCents: number;
+  hostNetAmountCents: number;
+  reversedAmountCents: number;
+  reversalTargetAmountCents: number;
+  currency: string;
+  eligibleAt: string;
+  movement: "stripe_transfer_to_connected_balance";
+  representsBankPayout: false;
+  transferredAt: string | null;
+}
+
+// Mirrors BookingPaymentSummaryDto. Payment state is authoritative here and in
+// GET /bookings/:id — never inferred from booking status, URL, or session_id.
+export interface BookingPaymentSummary {
+  bookingId: string;
+  bookingStatus: BookingStatus;
+  totalAmountCents: number;
+  currency: string;
+  payments: PaymentAttempt[];
+  transfer: HostTransferSummary | null;
+}
+
+// --- Stripe Checkout (POST /payments/checkout-session) ---
+
+// Mirrors CheckoutSessionDto. No amounts, secrets, or booking data — the browser
+// only redirects to checkoutUrl; the backend calculates all amounts.
+export interface CheckoutSession {
+  checkoutSessionId: string;
+  checkoutUrl: string;
+  expiresAt: string;
+}
+
 // --- Host listing management (see medicn/apps/api/src/listings + uploads) ---
 
 // Matches CreateListingDto exactly. Fields the DTO does not declare must NOT be

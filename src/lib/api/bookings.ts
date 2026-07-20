@@ -1,7 +1,9 @@
 import { apiFetch } from "./client";
 import type {
   Booking,
+  BookingCancellationResult,
   BookingListMeta,
+  CancellationRequestReason,
   CreateBookingInput,
 } from "./types";
 
@@ -57,6 +59,35 @@ export async function updateBookingStatus(
   const { data } = await apiFetch<Booking>(
     `/bookings/${encodeURIComponent(id)}/status`,
     { method: "PATCH", body: { status }, accessToken }
+  );
+  return data;
+}
+
+/**
+ * POST /api/v1/bookings/:id/cancel — request cancellation. The body is exactly
+ * `{ reason }`; actor identity/type, amounts, and financial disposition come
+ * from the backend, never the client.
+ *
+ * The backend REQUIRES an `Idempotency-Key` header and dedupes on
+ * `(bookingId, idempotencyKey)`. Callers must generate ONE stable key per
+ * logical cancellation attempt and reuse it when retrying that attempt, so a
+ * retry never creates a second cancellation. Returns the booking id/status and
+ * a safe cancellation summary (operation status + financial disposition).
+ *
+ * Surfaces BOOKING_CANCELLATION_NOT_ALLOWED, PAID_CANCELLATION_POLICY_UNAVAILABLE,
+ * CANCELLATION_ALREADY_IN_PROGRESS, PAYMENT_STATE_CHANGED,
+ * PAYMENT_PROVIDER_UNAVAILABLE, VALIDATION_ERROR, FORBIDDEN, NOT_FOUND, and
+ * rate-limit errors via ApiError.
+ */
+export async function cancelBooking(
+  id: string,
+  reason: CancellationRequestReason,
+  idempotencyKey: string,
+  accessToken?: string
+) {
+  const { data } = await apiFetch<BookingCancellationResult>(
+    `/bookings/${encodeURIComponent(id)}/cancel`,
+    { method: "POST", body: { reason }, idempotencyKey, accessToken }
   );
   return data;
 }

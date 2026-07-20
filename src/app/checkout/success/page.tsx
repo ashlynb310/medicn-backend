@@ -1,50 +1,36 @@
 import type { Metadata } from "next";
-import { CircleCheckBig } from "lucide-react";
+import { redirect } from "next/navigation";
 import PageContainer from "@/components/layout/page-container";
-import { ButtonLink } from "@/components/ui/button-link";
+import CheckoutReturn from "@/components/checkout/checkout-return";
 
 export const metadata: Metadata = {
-  title: "Payment Received | The MediCN",
+  title: "Confirming Payment | The MediCN",
 };
 
-// Stripe redirects here after checkout. The frontend must NOT claim the payment
-// succeeded — the authoritative payment/booking status is confirmed by the
-// backend Stripe webhook. So this page shows a "confirming" message and sends
-// the user to their bookings to see the real status. No backend call, no faked
-// success. `bookingId` is passed through only to link back to the booking.
+// Stripe redirects here as /checkout/success?session_id=...&bookingId=...
+// We deliberately read ONLY bookingId (a non-authoritative locator) and never
+// read, forward, or log session_id. Because Next serializes the URL query into
+// the client router payload, we FIRST strip session_id with a server-side
+// redirect so it never reaches the rendered HTML, client state, or logs.
+// Arrival here is NOT proof of payment; the client component loads the protected
+// booking/payment-summary and shows "Paid" only after the backend webhook.
 export default async function CheckoutSuccessPage({
   searchParams,
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const params = await searchParams;
-  const bookingId = Array.isArray(params.bookingId)
-    ? params.bookingId[0]
-    : params.bookingId;
+  const raw = params.bookingId;
+  const bookingId = (Array.isArray(raw) ? raw[0] : raw) ?? null;
 
-  const bookingHref = bookingId ? `/bookings/${bookingId}` : "/bookings";
+  // Strip session_id (or any extra params) from the browser-visible URL.
+  if ("session_id" in params) {
+    redirect(bookingId ? `/checkout/success?bookingId=${encodeURIComponent(bookingId)}` : "/checkout/success");
+  }
 
   return (
     <PageContainer width="narrow">
-      <div className="flex flex-col items-center gap-4 rounded-xl border border-slate-200 bg-white px-6 py-16 text-center">
-        <span className="flex size-14 items-center justify-center rounded-full bg-green-100 text-green-700">
-          <CircleCheckBig className="size-7" aria-hidden="true" />
-        </span>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Thanks — we&apos;re confirming your payment
-        </h1>
-        <p className="max-w-md text-sm text-slate-600">
-          Your checkout is complete. We&apos;re finalizing the payment and will
-          update your booking status shortly. You can track it from your
-          bookings.
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <ButtonLink href={bookingHref}>View booking</ButtonLink>
-          <ButtonLink href="/search" variant="outline">
-            Keep browsing
-          </ButtonLink>
-        </div>
-      </div>
+      <CheckoutReturn mode="success" bookingId={bookingId} />
     </PageContainer>
   );
 }

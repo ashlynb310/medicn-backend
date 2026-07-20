@@ -185,11 +185,48 @@ export interface ListingPhoto {
   source?: "processed" | "legacy";
 }
 
+// Host-writable window status. There is no writable "reserved"/"booked" status.
+export type ListingAvailabilityStatus = "available" | "blocked";
+
 export interface ListingAvailabilityWindow {
   id: string;
   startDate: string;
   endDate: string;
-  status: string;
+  status: ListingAvailabilityStatus;
+}
+
+export interface CivilDateRange {
+  startDate: string;
+  endDate: string;
+}
+
+// GET /listings/:id/availability/calendar (owner/admin). Reservation ranges are
+// opaque and read-only; they never reveal booking id/status or renter identity.
+export interface ReservedCalendarRange extends CivilDateRange {
+  status: "reserved";
+}
+
+export interface HostListingCalendar {
+  listingId: string;
+  timeZone: string;
+  range: CivilDateRange;
+  windows: ListingAvailabilityWindow[];
+  reservations: ReservedCalendarRange[];
+}
+
+// GET /listings/:id/calendar (public, approved only). Only merged unavailable
+// ranges; never distinguishes Host-blocked from reserved.
+export interface PublicListingCalendar {
+  timeZone: string;
+  range: CivilDateRange;
+  unavailable: CivilDateRange[];
+}
+
+// Availability list meta is page/limit/total only (no totalPages).
+export interface AvailabilityListMeta {
+  page: number;
+  limit: number;
+  total: number;
 }
 
 export type ListingPlaceType = "neighborhood_perk" | "local_recommendation";
@@ -359,26 +396,21 @@ export interface BookingListMeta {
 
 // --- Host listing management (see medicn/apps/api/src/listings + uploads) ---
 
-export interface ListingAvailabilityInput {
-  startDate: string;
-  endDate: string;
-}
-
 // Matches CreateListingDto exactly. Fields the DTO does not declare must NOT be
 // sent — the backend ValidationPipe uses forbidNonWhitelisted. `timeZone` is
-// required by the backend. `placeId` is the selected-address contract; the
-// backend resolves authoritative coordinates, so browser lat/long are not
-// authoritative even though the DTO still accepts them for compatibility.
+// required. `latitude`/`longitude` are REJECTED by the backend (@IsEmpty), so
+// the browser never sends them: the Host selects an address (with optional
+// placeId) and the backend resolves authoritative coordinates. Post-create
+// availability is managed through the dedicated availability endpoints, not
+// this payload.
 export interface CreateListingInput {
   title: string;
   description: string;
   city: string;
   timeZone: string;
+  checkoutTime?: string;
   address?: string;
   placeId?: string;
-  checkoutTime?: string;
-  latitude?: number;
-  longitude?: number;
   priceCents: number;
   priceUnit: PriceUnit;
   listingType: ListingType;
@@ -386,7 +418,29 @@ export interface CreateListingInput {
   stayDurations?: StayDuration[];
   proximityTags?: ProximityTag[];
   specialFeatures?: SpecialFeature[];
-  availability?: ListingAvailabilityInput[];
+  neighborhoodPerks?: string[];
+  localRecommendations?: string[];
+}
+
+// Matches UpdateListingDto. All fields optional; the legacy bulk `availability`
+// replacement is intentionally omitted — it is rejected with
+// AVAILABILITY_DEDICATED_ENDPOINT_REQUIRED. Manage calendar via the availability
+// endpoints instead. latitude/longitude are rejected, as with create.
+export interface UpdateListingInput {
+  title?: string;
+  description?: string;
+  city?: string;
+  timeZone?: string;
+  checkoutTime?: string;
+  address?: string;
+  placeId?: string;
+  priceCents?: number;
+  priceUnit?: PriceUnit;
+  listingType?: ListingType;
+  category?: string;
+  stayDurations?: StayDuration[];
+  proximityTags?: ProximityTag[];
+  specialFeatures?: SpecialFeature[];
   neighborhoodPerks?: string[];
   localRecommendations?: string[];
 }
@@ -395,6 +449,26 @@ export interface CreateListingInput {
 export interface CreatedListing {
   id: string;
   status: ListingStatus;
+}
+
+// DELETE /listings/:id archives (soft-deletes) and returns this.
+export interface ArchivedListing {
+  id: string;
+  status: ListingStatus;
+  deletedAt: string | null;
+}
+
+// PATCH /listings/:listingId/photos/:photoId/order response.
+export interface ReorderedListingPhoto {
+  id: string;
+  displayOrder: number;
+}
+
+// DELETE /listings/:listingId/photos/:photoId response.
+export interface DeletedListingPhoto {
+  id: string;
+  status: string;
+  legacy?: boolean;
 }
 
 // POST /uploads/presigned-url response (MediaService.createIntent). There is no

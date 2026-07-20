@@ -1,19 +1,27 @@
-import { ExternalLink, MapPin } from "lucide-react";
+import { ExternalLink } from "lucide-react";
+import ApproximateLocationMap from "@/components/maps/approximate-location-map";
 import type { PublicListingLocation } from "@/lib/api/types";
 
 interface ListingMapPreviewProps {
   publicLocation: PublicListingLocation;
 }
 
+function formatRadius(meters: number): string {
+  if (!Number.isFinite(meters) || meters <= 0) return "";
+  if (meters < 1000) return `${Math.round(meters)} m`;
+  return `${(meters / 1000).toFixed(1)} km`;
+}
+
 // Public listing map preview. The backend only exposes an APPROXIMATE location
 // to ordinary visitors (city + a coarse center/radius), never a street address
-// or exact pin. No Google Maps browser key is wired yet, so we link out at the
-// city level instead of embedding an exact-pin map widget. The interactive
-// approximate-area map is a later phase.
+// or exact pin. We render a non-interactive approximate-area disc (not an exact
+// marker) plus the label, and — with no Google Maps browser key wired — link out
+// at the city level. This works with no key and leaks nothing.
 export default function ListingMapPreview({
   publicLocation,
 }: ListingMapPreviewProps) {
-  const { city } = publicLocation;
+  const { city, radiusMeters, latitude, longitude } = publicLocation;
+  const radiusLabel = formatRadius(radiusMeters);
   const mapsUrl = city
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(city)}`
     : null;
@@ -26,9 +34,19 @@ export default function ListingMapPreview({
           Approximate location
         </span>
       </div>
-      <p className="flex items-center gap-1.5 text-sm text-slate-700">
-        <MapPin className="size-4 shrink-0" aria-hidden="true" />
+
+      {/* Approximate-area treatment: a real circle when keyed + coords exist,
+          otherwise a neutral area. Never an exact-property pin. */}
+      <ApproximateLocationMap
+        latitude={latitude}
+        longitude={longitude}
+        radiusMeters={radiusMeters}
+        city={city}
+      />
+
+      <p className="text-sm text-slate-700">
         {city || "Location not provided"}
+        {radiusLabel ? ` · approximate area (~${radiusLabel} radius)` : ""}
       </p>
       <p className="text-xs text-slate-500">
         The exact address is shared with you after a booking is paid.

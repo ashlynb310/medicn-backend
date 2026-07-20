@@ -1,11 +1,16 @@
 import { apiFetch } from "./client";
 import type {
+  ArchivedListing,
   CreatedListing,
   CreateListingInput,
+  DeletedListingPhoto,
+  ListingDetail,
   ListingStatus,
   ListingSummary,
   PaginationMeta,
   PresignedUpload,
+  ReorderedListingPhoto,
+  UpdateListingInput,
 } from "./types";
 
 export interface MyListingsParams {
@@ -52,6 +57,72 @@ export async function createListing(
     body: input,
     accessToken,
   });
+  return data;
+}
+
+/**
+ * PATCH /api/v1/listings/:id — update owner listing fields. Returns the owner
+ * listing detail projection (with exactLocation). Does NOT accept bulk
+ * availability (rejected with AVAILABILITY_DEDICATED_ENDPOINT_REQUIRED) or
+ * latitude/longitude. Surfaces NOT_FOUND, FORBIDDEN, VALIDATION_ERROR,
+ * LISTING_LOCATION_* and LISTING_STATUS_NOT_ALLOWED via ApiError.
+ */
+export async function updateListing(
+  id: string,
+  input: UpdateListingInput,
+  accessToken?: string
+) {
+  const { data } = await apiFetch<ListingDetail>(
+    `/listings/${encodeURIComponent(id)}`,
+    { method: "PATCH", body: input, accessToken }
+  );
+  return data;
+}
+
+/**
+ * DELETE /api/v1/listings/:id — archive (soft-delete) an owned listing. The
+ * backend blocks archive with LISTING_ARCHIVE_BLOCKED_BY_ACTIVE_BOOKINGS when
+ * active booking obligations exist.
+ */
+export async function archiveListing(id: string, accessToken?: string) {
+  const { data } = await apiFetch<ArchivedListing>(
+    `/listings/${encodeURIComponent(id)}`,
+    { method: "DELETE", accessToken }
+  );
+  return data;
+}
+
+/** DELETE /api/v1/listings/:listingId/photos/:photoId — remove a listing photo. */
+export async function deleteListingPhoto(
+  listingId: string,
+  photoId: string,
+  accessToken?: string
+) {
+  const { data } = await apiFetch<DeletedListingPhoto>(
+    `/listings/${encodeURIComponent(listingId)}/photos/${encodeURIComponent(
+      photoId
+    )}`,
+    { method: "DELETE", accessToken }
+  );
+  return data;
+}
+
+/**
+ * PATCH /api/v1/listings/:listingId/photos/:photoId/order — set a photo's
+ * display order (0..10000).
+ */
+export async function reorderListingPhoto(
+  listingId: string,
+  photoId: string,
+  displayOrder: number,
+  accessToken?: string
+) {
+  const { data } = await apiFetch<ReorderedListingPhoto>(
+    `/listings/${encodeURIComponent(listingId)}/photos/${encodeURIComponent(
+      photoId
+    )}/order`,
+    { method: "PATCH", body: { displayOrder }, accessToken }
+  );
   return data;
 }
 

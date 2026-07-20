@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Loader2, Trash2, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CircleAlert, CircleCheck, Loader2, RotateCcw, Trash2, Upload } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,12 +11,24 @@ import {
 } from "@/lib/api/profile-photo";
 import { deleteProfilePhoto } from "@/lib/api/auth";
 import { ApiError, toErrorMessage } from "@/lib/api/client";
-import { completeUpload, uploadFileToSignedUrl } from "@/lib/api/uploads";
+import {
+  completeUpload,
+  pollUploadUntilTerminal,
+  uploadFileToSignedUrl,
+} from "@/lib/api/uploads";
 import { avatarColorClass, avatarInitials } from "@/lib/avatar";
 
 // Client MIME/size checks below are usability guards only — the backend media
 // pipeline is authoritative.
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+
+type PhotoState =
+  | "idle"
+  | "uploading"
+  | "processing"
+  | "ready"
+  | "rejected"
+  | "timeout";
 
 function isAllowedType(type: string): type is ProfilePhotoContentType {
   return (PROFILE_PHOTO_CONTENT_TYPES as readonly string[]).includes(type);
@@ -27,11 +39,12 @@ function isRenderableImageUrl(value: string | null): value is string {
 }
 
 // Profile-photo upload using the backend media pipeline:
-//   POST /uploads/presigned-url -> PUT to storage -> POST /uploads/:id/complete.
-// The processed avatar is published asynchronously by the backend; a successful
-// upload is "processing", not "ready". We refresh the profile so the processed
-// photo appears once ready and never write a browser-provided URL via the
-// profile API (external profile-photo URLs are rejected by the backend).
+//   POST /uploads/presigned-url -> PUT to storage -> POST /uploads/:id/complete
+//   -> poll GET /uploads/:id until ready/rejected/deleted (or timeout).
+// The processed avatar is published asynchronously; a successful PUT is
+// "processing", not "ready". Only the backend-processed avatar is rendered
+// (never the local file). On ready we refresh the AuthProvider profile so the
+// processed photo appears. Polling is cancelled on unmount/navigation.
 export default function ProfilePhotoUpload({
   currentPhotoUrl,
   fallbackLabel,
@@ -41,15 +54,41 @@ export default function ProfilePhotoUpload({
 }) {
   const { accessToken, refreshProfile } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const lastIntentRef = useRef<string | null>(null);
+  const [photoState, setPhotoState] = useState<PhotoState>("idle");
+  const [rejectionCode, setRejectionCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [processing, setProcessing] = useState(false);
   const [removed, setRemoved] = useState(false);
+
+  useEffect(() => {
+    abortRef.current = new AbortController();
+    return () => abortRef.current?.abort();
+  }, []);
+
+  const isBusy = photoState === "uploading" || photoState === "processing";
+
+  const applyTerminal = async (asset: {
+    status: string;
+    rejectionCode: string | null;
+  }) => {
+    if (asset.status === "ready") {
+      setPhotoState("ready");
+      // Reflect the processed photo once the backend publishes it.
+      await refreshProfile();
+    } else if (asset.status === "rejected" || asset.status === "deleted") {
+      setPhotoState("rejected");
+      setRejectionCode(asset.rejectionCode);
+    } else {
+      // Timed out while still processing — honest "still processing" state.
+      setPhotoState("timeout");
+    }
+  };
 
   const handleFile = async (file: File) => {
     setError(null);
-    setProcessing(false);
     setRemoved(false);
+    setRejectionCode(null);
     if (!isAllowedType(file.type)) {
       setError("Choose a JPEG, PNG, or WebP image.");
       return;
@@ -59,7 +98,7 @@ export default function ProfilePhotoUpload({
       return;
     }
 
-    setIsUploading(true);
+    setPhotoState("uploading");
     try {
       const token = accessToken ?? undefined;
       const presigned = await createProfilePhotoPresignedUpload(
@@ -68,37 +107,67 @@ export default function ProfilePhotoUpload({
       );
       await uploadFileToSignedUrl(presigned.uploadUrl, file);
       await completeUpload(presigned.uploadIntentId, token);
-      setProcessing(true);
-      // Reflect the processed photo once the backend publishes it.
-      await refreshProfile();
+      lastIntentRef.current = presigned.uploadIntentId;
+      setPhotoState("processing");
+      const asset = await pollUploadUntilTerminal(presigned.uploadIntentId, {
+        accessToken: token,
+        signal: abortRef.current?.signal,
+      });
+      await applyTerminal(asset);
     } catch (uploadError) {
+      if (uploadError instanceof DOMException && uploadError.name === "AbortError") {
+        return; // unmounted/navigated away
+      }
+      setPhotoState("idle");
       setError(
         uploadError instanceof ApiError
           ? uploadError.message
           : toErrorMessage(uploadError)
       );
-    } finally {
-      setIsUploading(false);
+    }
+  };
+
+  const recheck = async () => {
+    const intentId = lastIntentRef.current;
+    if (!intentId) {
+      await refreshProfile();
+      return;
+    }
+    setError(null);
+    setPhotoState("processing");
+    try {
+      const asset = await pollUploadUntilTerminal(intentId, {
+        accessToken: accessToken ?? undefined,
+        signal: abortRef.current?.signal,
+        timeoutMs: 30_000,
+      });
+      await applyTerminal(asset);
+    } catch (recheckError) {
+      if (recheckError instanceof DOMException && recheckError.name === "AbortError") {
+        return;
+      }
+      setPhotoState("timeout");
+      setError(toErrorMessage(recheckError));
     }
   };
 
   const removePhoto = async () => {
     setError(null);
-    setProcessing(false);
+    setRejectionCode(null);
     setRemoved(false);
-    setIsUploading(true);
+    setPhotoState("uploading");
     try {
       await deleteProfilePhoto(accessToken ?? undefined);
       await refreshProfile();
       setRemoved(true);
+      setPhotoState("idle");
     } catch (removeError) {
+      setPhotoState("idle");
       setError(
         removeError instanceof ApiError
           ? removeError.message
           : toErrorMessage(removeError)
       );
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -147,12 +216,12 @@ export default function ProfilePhotoUpload({
             <Button
               type="button"
               variant="outline"
-              disabled={isUploading}
+              disabled={isBusy}
               onClick={() => inputRef.current?.click()}
             >
               <Upload aria-hidden="true" />
-              {isUploading
-                ? "Uploading..."
+              {isBusy
+                ? "Working…"
                 : currentPhotoUrl
                   ? "Change photo"
                   : "Upload photo"}
@@ -161,7 +230,7 @@ export default function ProfilePhotoUpload({
               <Button
                 type="button"
                 variant="destructive"
-                disabled={isUploading}
+                disabled={isBusy}
                 onClick={() => void removePhoto()}
               >
                 <Trash2 aria-hidden="true" />
@@ -178,11 +247,37 @@ export default function ProfilePhotoUpload({
           {error}
         </p>
       )}
-      {processing && (
+      {photoState === "processing" && (
         <p role="status" className="flex items-center gap-1.5 text-sm text-amber-700">
           <Loader2 className="size-4 animate-spin" aria-hidden="true" />
           Photo uploaded — processing. It will appear once ready.
         </p>
+      )}
+      {photoState === "ready" && (
+        <p role="status" className="flex items-center gap-1.5 text-sm text-green-700">
+          <CircleCheck className="size-4" aria-hidden="true" />
+          Photo processed and updated.
+        </p>
+      )}
+      {photoState === "rejected" && (
+        <p role="alert" className="flex items-center gap-1.5 text-sm text-red-600">
+          <CircleAlert className="size-4" aria-hidden="true" />
+          {rejectionCode
+            ? `We couldn't use that image (${rejectionCode}). Try a different photo.`
+            : "We couldn't use that image. Try a different photo."}
+        </p>
+      )}
+      {photoState === "timeout" && (
+        <div className="flex flex-wrap items-center gap-2">
+          <p role="status" className="flex items-center gap-1.5 text-sm text-amber-700">
+            <Loader2 className="size-4" aria-hidden="true" />
+            Still processing. This can take a moment.
+          </p>
+          <Button type="button" variant="outline" size="sm" onClick={() => void recheck()}>
+            <RotateCcw className="size-3.5" aria-hidden="true" />
+            Check again
+          </Button>
+        </div>
       )}
       {removed && (
         <p role="status" className="text-sm text-slate-600">

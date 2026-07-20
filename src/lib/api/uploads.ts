@@ -28,6 +28,81 @@ export async function getUploadStatus(
   return data;
 }
 
+// Media processing is asynchronous. These are the states after which no more
+// work happens, so polling must stop.
+const TERMINAL_UPLOAD_STATUSES: UploadAsset["status"][] = [
+  "ready",
+  "rejected",
+  "deleted",
+];
+
+export function isTerminalUploadStatus(status: UploadAsset["status"]) {
+  return TERMINAL_UPLOAD_STATUSES.includes(status);
+}
+
+/** Rejects with an AbortError if the signal fires while waiting. */
+function abortableDelay(ms: number, signal?: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("Aborted", "AbortError"));
+      return;
+    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+/**
+ * Polls GET /uploads/:intentId with bounded exponential backoff until the asset
+ * reaches a terminal status (ready/rejected/deleted), the overall timeout
+ * elapses, or the AbortSignal fires (unmount/navigation). Each status is passed
+ * to onUpdate. Returns the last observed asset; callers that get a non-terminal
+ * status back should treat it as "still processing" rather than success.
+ */
+export async function pollUploadUntilTerminal(
+  intentId: string,
+  options: {
+    accessToken?: string;
+    signal?: AbortSignal;
+    onUpdate?: (asset: UploadAsset) => void;
+    timeoutMs?: number;
+    initialIntervalMs?: number;
+    maxIntervalMs?: number;
+  } = {}
+) {
+  const {
+    accessToken,
+    signal,
+    onUpdate,
+    timeoutMs = 90_000,
+    initialIntervalMs = 1_000,
+    maxIntervalMs = 5_000,
+  } = options;
+
+  const startedAt = Date.now();
+  let interval = initialIntervalMs;
+  let asset = await getUploadStatus(intentId, accessToken, signal);
+  onUpdate?.(asset);
+
+  while (!isTerminalUploadStatus(asset.status)) {
+    if (Date.now() - startedAt >= timeoutMs) {
+      return asset;
+    }
+    await abortableDelay(interval, signal);
+    interval = Math.min(interval * 2, maxIntervalMs);
+    asset = await getUploadStatus(intentId, accessToken, signal);
+    onUpdate?.(asset);
+  }
+  return asset;
+}
+
 /** DELETE /uploads/:assetId — remove an upload asset the caller owns. */
 export async function deleteUpload(assetId: string, accessToken?: string) {
   const { data } = await apiFetch<{ id: string | null; status: string }>(

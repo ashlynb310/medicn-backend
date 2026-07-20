@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarDays, CircleAlert, CircleCheck } from "lucide-react";
+import { CalendarDays, CircleAlert, CircleCheck, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button-link";
 import { Input } from "@/components/ui/input";
@@ -18,9 +18,10 @@ import { BookingStatusBadge } from "@/components/ui/status-badge";
 import { useAuth } from "@/components/auth/auth-provider";
 import { createBooking } from "@/lib/api/bookings";
 import { ApiError, toErrorMessage } from "@/lib/api/client";
-import type { Booking, ListingDetail } from "@/lib/api/types";
+import type { Booking, CivilDateRange, ListingDetail } from "@/lib/api/types";
 import { formatPrice, formatStayDuration } from "@/lib/listing-format";
 import { estimateTotalCents, nightsBetween } from "@/lib/booking-format";
+import { civilRangeOverlapsAny, todayInTimeZone } from "@/lib/civil-date";
 
 type FormListing = Pick<
   ListingDetail,
@@ -31,10 +32,6 @@ function defaultOptionForUnit(priceUnit: FormListing["priceUnit"]) {
   if (priceUnit === "day") return { value: "daily", label: "Daily stay" };
   if (priceUnit === "month") return { value: "monthly", label: "Monthly stay" };
   return { value: "nightly", label: "Nightly stay" };
-}
-
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
 }
 
 // Human-readable guidance for the backend error codes this endpoint can return.
@@ -55,10 +52,18 @@ function recoveryHintFor(code: string) {
 
 export default function BookingRequestForm({
   listing,
+  timeZone,
+  unavailableRanges,
 }: {
   listing: FormListing;
+  // Listing IANA timezone — "today" and the date input floor are computed in
+  // the listing's zone, never the browser's.
+  timeZone: string;
+  // Advisory only — the backend is authoritative on availability.
+  unavailableRanges?: CivilDateRange[];
 }) {
   const { status, accessToken } = useAuth();
+  const today = todayInTimeZone(timeZone);
 
   const stayOptions = useMemo<Record<string, string>>(() => {
     if (listing.stayDurations.length > 0) {
@@ -87,6 +92,12 @@ export default function BookingRequestForm({
 
   const nights = startDate && endDate ? nightsBetween(startDate, endDate) : 0;
   const datesValid = nights > 0;
+  // Advisory overlap check against backend-provided unavailable ranges. Dates
+  // are half-open [start, end): overlap when start < r.end && end > r.start.
+  const overlapsUnavailable = useMemo(() => {
+    if (!datesValid || !unavailableRanges?.length) return false;
+    return civilRangeOverlapsAny({ startDate, endDate }, unavailableRanges);
+  }, [datesValid, startDate, endDate, unavailableRanges]);
   const estimateCents = datesValid
     ? estimateTotalCents(
         listing.priceCents,
@@ -231,7 +242,7 @@ export default function BookingRequestForm({
           <Input
             id="booking-start"
             type="date"
-            min={todayIso()}
+            min={today}
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
             required
@@ -242,13 +253,24 @@ export default function BookingRequestForm({
           <Input
             id="booking-end"
             type="date"
-            min={startDate || todayIso()}
+            min={startDate || today}
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             required
           />
         </div>
       </div>
+
+      {overlapsUnavailable && (
+        <p
+          role="status"
+          className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-sm text-amber-900"
+        >
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          Some of these dates look unavailable. You can still send the request,
+          but the host may not be able to accept it.
+        </p>
+      )}
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="booking-option">Stay option</Label>

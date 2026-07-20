@@ -1,6 +1,6 @@
-import AvailabilitySummary from "@/components/listings/availability-summary";
-import BookingRequestForm from "@/components/bookings/booking-request-form";
+import ListingReservePanel from "@/components/listings/listing-reserve-panel";
 import ListingMapPreview from "@/components/listings/listing-map-preview";
+import NearbyPlacesList from "@/components/listings/nearby-places-list";
 import ListingPhotoGallery from "@/components/listings/listing-photo-gallery";
 import ListingPlaceList from "@/components/listings/listing-place-list";
 import { ListingStatusBadge } from "@/components/ui/status-badge";
@@ -108,13 +108,14 @@ export default function ListingDetailView({
 
         <aside className="flex flex-col gap-6">
           {isApproved ? (
-            <BookingRequestForm
+            <ListingReservePanel
               listing={{
                 id: listing.id,
                 priceCents: listing.priceCents,
                 currency: listing.currency,
                 priceUnit: listing.priceUnit,
                 stayDurations: listing.stayDurations,
+                timeZone: listing.timeZone,
               }}
             />
           ) : (
@@ -129,8 +130,8 @@ export default function ListingDetailView({
               </p>
             </div>
           )}
-          <AvailabilitySummary availability={listing.availability} />
           <ListingMapPreview publicLocation={listing.publicLocation} />
+          <NearbyPlacesList nearbyPlaces={listing.nearbyPlaces} />
         </aside>
       </div>
     </article>

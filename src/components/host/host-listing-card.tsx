@@ -17,7 +17,7 @@ export default function HostListingCard({
   return (
     <Card className="h-full transition-shadow hover:shadow-md">
       <Link
-        href={`/listings/${listing.id}`}
+        href={`/host/listings/${listing.id}`}
         className="flex h-full flex-col rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <div className="relative -mt-(--card-spacing) h-40 w-full overflow-hidden bg-slate-100">

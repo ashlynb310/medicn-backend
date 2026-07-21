@@ -1,4 +1,5 @@
 import ListingReservePanel from "@/components/listings/listing-reserve-panel";
+import ListingInquiryForm from "@/components/messaging/listing-inquiry-form";
 import ListingMapPreview from "@/components/listings/listing-map-preview";
 import NearbyPlacesList from "@/components/listings/nearby-places-list";
 import ListingPhotoGallery from "@/components/listings/listing-photo-gallery";
@@ -129,6 +130,13 @@ export default function ListingDetailView({
                 can request to book.
               </p>
             </div>
+          )}
+          {/* Renter-only inquiry form; self-hides for the owner/host/admin. */}
+          {isApproved && (
+            <ListingInquiryForm
+              listingId={listing.id}
+              hostId={listing.host.id}
+            />
           )}
           <ListingMapPreview publicLocation={listing.publicLocation} />
           <NearbyPlacesList nearbyPlaces={listing.nearbyPlaces} />

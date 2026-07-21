@@ -1,7 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { CalendarDays, ChevronDown, LayoutDashboard, LogOut, Shield, User } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronDown,
+  LayoutDashboard,
+  LogOut,
+  MessagesSquare,
+  Shield,
+  User,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useUnreadInquiries } from "@/components/messaging/use-unread-inquiries";
 import { avatarColorClass, avatarInitials } from "@/lib/avatar";
 
 function isRenderableImageUrl(
@@ -24,6 +33,8 @@ function isRenderableImageUrl(
 export default function AccountMenu() {
   const router = useRouter();
   const { user, email, signOut } = useAuth();
+  // Real unread total from the backend inbox + realtime notifications.
+  const { total: unreadTotal } = useUnreadInquiries();
 
   const label =
     user?.displayName || user?.firstName || email || "Account";
@@ -69,6 +80,18 @@ export default function AccountMenu() {
           <DropdownMenuLabel className="truncate">{email}</DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => router.push("/messages")}>
+          <MessagesSquare aria-hidden="true" />
+          Messages
+          {unreadTotal > 0 && (
+            <span
+              className="ml-auto rounded-full bg-sky-600 px-1.5 py-0.5 text-xs font-semibold text-white"
+              aria-label={`${unreadTotal} unread messages`}
+            >
+              {unreadTotal}
+            </span>
+          )}
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push("/bookings")}>
           <CalendarDays aria-hidden="true" />
           My Bookings

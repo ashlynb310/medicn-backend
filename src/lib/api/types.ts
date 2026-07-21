@@ -500,6 +500,151 @@ export interface CheckoutSession {
   expiresAt: string;
 }
 
+// --- Messaging / inquiries (see medicn/apps/api/src/messaging) ---
+
+export type InquiryStatus = "open" | "closed";
+
+// Immutable presentation/audit marker captured on each message by the backend.
+export type InquirySenderRole = "renter" | "host" | "admin";
+
+// Safe participant projection: no email, phone, address, or healthcare fields.
+export interface SafeInquiryParticipant {
+  id: string;
+  displayName: string;
+  profilePhotoUrl: string | null;
+}
+
+// Mirrors MessagingService.toSummary / InquirySummaryDto.
+export interface InquirySummary {
+  id: string;
+  status: InquiryStatus;
+  listing: {
+    id: string;
+    title: string;
+    city: string;
+    listingType: string;
+    photoUrl: string | null;
+  };
+  counterpart: SafeInquiryParticipant | null;
+  participants: {
+    renter: SafeInquiryParticipant;
+    host: SafeInquiryParticipant;
+  };
+  unreadCount: number;
+  archived: boolean;
+  lastReadSequence: number;
+  lastSequence: number;
+  lastMessageAt: string | null;
+  lastMessagePreview: string | null;
+  closedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Sequence is allocated by the backend only — never generated in the browser.
+export interface InquiryMessage {
+  id: string;
+  sequence: number;
+  sender: {
+    id: string;
+    displayName: string;
+    role: InquirySenderRole;
+  };
+  isAdmin: boolean;
+  body: string;
+  createdAt: string;
+}
+
+export interface InquiryPageInfo {
+  afterSequence: number;
+  nextCursor: number;
+  hasMore: boolean;
+}
+
+// GET /inquiries/:id
+export interface InquiryThread {
+  inquiry: InquirySummary;
+  messages: InquiryMessage[];
+  pageInfo: InquiryPageInfo;
+}
+
+// POST /listings/:listingId/inquiries (no pageInfo on creation).
+export interface CreatedInquiry {
+  inquiry: InquirySummary;
+  messages: InquiryMessage[];
+}
+
+// POST /inquiries/:id/messages
+export interface SentInquiryMessage extends InquiryMessage {
+  inquiryId: string;
+}
+
+// POST /inquiries/:id/read
+export interface InquiryReadResult {
+  inquiryId: string;
+  lastReadSequence: number;
+  unreadCount: number;
+  readAt: string | null;
+}
+
+// POST /inquiries/:id/close — permanent; there is no reopen endpoint.
+export interface InquiryCloseResult {
+  id: string;
+  status: "closed";
+  closedAt: string;
+}
+
+// POST /inquiries/:id/archive — only the caller's own archive state changes.
+export interface InquiryArchiveResult {
+  inquiryId: string;
+  archived: boolean;
+  archivedAt: string | null;
+}
+
+export interface InquiryListMeta {
+  page: number;
+  limit: number;
+  total: number;
+}
+
+// --- Socket.IO notification payloads (namespace /messaging) ---
+// These are HINTS ONLY: opaque ids, sequences, statuses, and timestamps. They
+// never carry message bodies, profiles, contact details, or tokens. Clients
+// reconcile against REST.
+
+export interface MessageCreatedEvent {
+  eventId: string;
+  inquiryId: string;
+  messageId: string;
+  sequence: number;
+  createdAt: string;
+}
+
+export interface InquiryUpdatedEvent {
+  eventId: string;
+  inquiryId: string;
+  status: InquiryStatus;
+  lastSequence: number;
+  lastMessageAt: string | null;
+  updatedAt: string;
+}
+
+export interface InquiryClosedEvent {
+  eventId: string;
+  inquiryId: string;
+  status: "closed";
+  closedAt: string;
+}
+
+export interface UnreadChangedEvent {
+  eventId: string;
+  inquiryId: string;
+  userId: string;
+  updatedAt: string;
+  lastReadSequence?: number;
+  unreadCount?: number;
+}
+
 // --- Host listing management (see medicn/apps/api/src/listings + uploads) ---
 
 // Matches CreateListingDto exactly. Fields the DTO does not declare must NOT be

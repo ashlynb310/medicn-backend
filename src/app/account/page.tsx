@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, CircleAlert, Save } from "lucide-react";
+import { CheckCircle2, CircleAlert, Save, ShieldCheck } from "lucide-react";
 import SignInRequired from "@/components/auth/sign-in-required";
 import { useAuth } from "@/components/auth/auth-provider";
 import ProfilePhotoUpload from "@/components/auth/profile-photo-upload";
@@ -11,6 +11,7 @@ import PageContainer from "@/components/layout/page-container";
 import PageHeader from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button-link";
 import ErrorState from "@/components/ui/error-state";
 import { Input } from "@/components/ui/input";
 import {
@@ -154,9 +155,15 @@ export default function AccountPage() {
         title="Your profile"
         description="Keep your MediCN account details current."
         actions={
-          <Button variant="outline" onClick={handleSignOut}>
-            Log out
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <ButtonLink href="/account/verification" variant="outline">
+              <ShieldCheck aria-hidden="true" />
+              Verification
+            </ButtonLink>
+            <Button variant="outline" onClick={handleSignOut}>
+              Log out
+            </Button>
+          </div>
         }
       />
 

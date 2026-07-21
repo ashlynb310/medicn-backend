@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { acquireMessagingSocket } from "@/lib/realtime/messaging-socket";
+import {
+  createConnectionGeneration,
+  resolveRealtimeStatus,
+  type FallbackReason,
+  type RealtimeConnectionStatus,
+} from "@/lib/realtime/connection-identity";
 import type {
   InquiryClosedEvent,
   InquiryUpdatedEvent,
@@ -18,13 +24,7 @@ export type RealtimeNotification =
   | { type: "inquiry.closed"; payload: InquiryClosedEvent }
   | { type: "unread.changed"; payload: UnreadChangedEvent };
 
-/** Why realtime is not live. Never exposes provider or token detail. */
-export type FallbackReason =
-  | "connecting"
-  | "disconnected"
-  | "unavailable"
-  | "rate_limited"
-  | "timeout";
+export type { FallbackReason };
 
 interface SubscribeAck {
   ok?: boolean;
@@ -50,16 +50,23 @@ export function useMessagingRealtime({
   onNotify: (notification: RealtimeNotification) => void;
 }): { live: boolean; fallbackReason: FallbackReason | null } {
   const { accessToken } = useAuth();
-  // Connection identity: a changed token or room is a DIFFERENT connection, so
-  // any status recorded for a previous one is discarded during render. This
-  // resets to "connecting" immediately, without briefly retaining the old
-  // room/token's live state and without setting state inside an effect.
-  const connectionKey = `${accessToken ?? ""}|${inquiryId ?? ""}`;
-  const [status, setStatus] = useState<{
-    key: string;
-    live: boolean;
-    reason: FallbackReason | null;
-  }>({ key: connectionKey, live: false, reason: "connecting" });
+  // Opaque per-connection identity: a fresh, empty object is minted whenever the
+  // token or room changes. ONLY this object is stored in status — the access
+  // token is never copied into state, hashed, interpolated, rendered, or
+  // persisted; it goes solely to the socket manager to build the handshake.
+  const generation = useMemo(
+    () => createConnectionGeneration(),
+    // The token and room ARE the connection identity, so they belong in this
+    // dependency list even though the factory deliberately ignores them: a
+    // change must mint a new opaque generation. Nothing about them is retained.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [accessToken, inquiryId]
+  );
+  const [status, setStatus] = useState<RealtimeConnectionStatus>(() => ({
+    generation,
+    live: false,
+    reason: "connecting",
+  }));
   const notifyRef = useRef(onNotify);
 
   useEffect(() => {
@@ -75,15 +82,15 @@ export function useMessagingRealtime({
     const socket = handle.socket;
     let disposed = false;
 
-    // Status writes carry this connection's key; a late write from a replaced
-    // connection is ignored at render time.
+    // `disposed` guards against writes from an effect run that has already been
+    // cleaned up; the generation tag makes any such write inert at render time.
     const goLive = () => {
       if (disposed) return;
-      setStatus({ key: connectionKey, live: true, reason: null });
+      setStatus({ generation, live: true, reason: null });
     };
     const goFallback = (reason: FallbackReason) => {
       if (disposed) return;
-      setStatus({ key: connectionKey, live: false, reason });
+      setStatus({ generation, live: false, reason });
     };
 
     const subscribe = () => {
@@ -158,13 +165,9 @@ export function useMessagingRealtime({
       socket.off("unread.changed", onUnreadChanged);
       handle.release();
     };
-  }, [accessToken, inquiryId, connectionKey]);
+  }, [accessToken, inquiryId, generation]);
 
-  // Status from a previous token/room is never shown.
-  const current =
-    status.key === connectionKey
-      ? status
-      : { key: connectionKey, live: false, reason: "connecting" as const };
-
-  return { live: current.live, fallbackReason: current.reason };
+  // Status from a previous generation (rotated token or changed room) resolves
+  // immediately to a non-live "connecting" state during this very render.
+  return resolveRealtimeStatus(status, generation);
 }

@@ -9,6 +9,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import ErrorState from "@/components/ui/error-state";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -386,6 +387,21 @@ export default function IdentityVerificationPanel() {
       {loadError && phase === "ready" && <ErrorNotice error={loadError} />}
 
       {startError && <ErrorNotice error={startError} />}
+
+      {/* Separate workflow — deliberately not merged with the identity status
+          above. Healthcare credentials have their own submissions and decision. */}
+      <div className="flex flex-col items-start gap-2 border-t border-slate-200 pt-4">
+        <h3 className="text-sm font-semibold text-slate-900">
+          Healthcare credentials
+        </h3>
+        <p className="text-sm text-slate-600">
+          Verifying your professional role and affiliation is a separate
+          workflow with its own review and status.
+        </p>
+        <ButtonLink href="/account/healthcare-verification" variant="outline">
+          Healthcare credentials
+        </ButtonLink>
+      </div>
 
       {actionLabel && (
         <div className="flex flex-col gap-2">

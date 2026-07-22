@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, CircleAlert, Save, ShieldCheck } from "lucide-react";
+import {
+  CheckCircle2,
+  CircleAlert,
+  Save,
+  ShieldCheck,
+  Stethoscope,
+} from "lucide-react";
 import SignInRequired from "@/components/auth/sign-in-required";
 import { useAuth } from "@/components/auth/auth-provider";
 import ProfilePhotoUpload from "@/components/auth/profile-photo-upload";
@@ -158,7 +164,11 @@ export default function AccountPage() {
           <div className="flex flex-wrap gap-2">
             <ButtonLink href="/account/verification" variant="outline">
               <ShieldCheck aria-hidden="true" />
-              Verification
+              Identity
+            </ButtonLink>
+            <ButtonLink href="/account/healthcare-verification" variant="outline">
+              <Stethoscope aria-hidden="true" />
+              Healthcare credentials
             </ButtonLink>
             <Button variant="outline" onClick={handleSignOut}>
               Log out

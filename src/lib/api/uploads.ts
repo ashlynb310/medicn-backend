@@ -113,10 +113,20 @@ export async function deleteUpload(assetId: string, accessToken?: string) {
 }
 
 /**
- * Uploads directly to a short-lived Supabase Storage URL. The capability token
- * is embedded in the URL, so the browser must not attach its bearer token.
+ * Uploads directly to a short-lived signed storage URL. The capability token is
+ * embedded in the URL, so the browser MUST NOT attach its Supabase bearer token
+ * — this deliberately bypasses apiFetch and sets no Authorization header.
+ *
+ * The optional AbortSignal lets sensitive transfers be cancelled (unmount,
+ * token change, replacement attempt); an abort is rethrown untouched so callers
+ * can ignore it instead of showing a false failure. Existing callers that omit
+ * the signal are unaffected.
  */
-export async function uploadFileToSignedUrl(uploadUrl: string, file: File) {
+export async function uploadFileToSignedUrl(
+  uploadUrl: string,
+  file: File,
+  signal?: AbortSignal
+) {
   let response: Response;
   try {
     response = await fetch(uploadUrl, {
@@ -126,8 +136,12 @@ export async function uploadFileToSignedUrl(uploadUrl: string, file: File) {
         "x-upsert": "true",
       },
       body: file,
+      signal,
     });
-  } catch {
+  } catch (cause) {
+    if (cause instanceof DOMException && cause.name === "AbortError") {
+      throw cause;
+    }
     throw new ApiError(
       {
         code: "UPLOAD_NETWORK_ERROR",

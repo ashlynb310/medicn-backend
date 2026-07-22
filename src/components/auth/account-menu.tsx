@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import {
+  Activity,
   CalendarDays,
   ChevronDown,
   LayoutDashboard,
@@ -112,6 +113,12 @@ export default function AccountMenu() {
           <User aria-hidden="true" />
           Profile
         </DropdownMenuItem>
+        {isAdmin && (
+          <DropdownMenuItem onClick={() => router.push("/admin/operations")}>
+            <Activity aria-hidden="true" />
+            Operations monitoring
+          </DropdownMenuItem>
+        )}
         {isAdmin && (
           <DropdownMenuItem onClick={() => router.push("/admin/listings")}>
             <Shield aria-hidden="true" />

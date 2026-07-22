@@ -8,6 +8,7 @@ import {
   LogOut,
   MessagesSquare,
   Shield,
+  ShieldCheck,
   User,
 } from "lucide-react";
 import {
@@ -108,6 +109,14 @@ export default function AccountMenu() {
           <DropdownMenuItem onClick={() => router.push("/admin/listings")}>
             <Shield aria-hidden="true" />
             Listing moderation
+          </DropdownMenuItem>
+        )}
+        {isAdmin && (
+          <DropdownMenuItem
+            onClick={() => router.push("/admin/healthcare-verifications")}
+          >
+            <ShieldCheck aria-hidden="true" />
+            Healthcare review
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />

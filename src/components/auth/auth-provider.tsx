@@ -58,6 +58,8 @@ interface AuthContextValue {
   configured: boolean;
   /** Email from the Supabase session (available before the profile loads). */
   email: string | null;
+  /** Stable Supabase account owner, used to reject a stale MediCN profile. */
+  sessionUserId: string | null;
   /**
    * ISO timestamp of Supabase email confirmation, or null when unconfirmed.
    * Reported honestly for diagnostics; email verification does NOT gate access.
@@ -294,6 +296,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profileStatus,
       configured: isSupabaseConfigured,
       email: session?.user.email ?? null,
+      sessionUserId: session?.user.id ?? null,
       emailConfirmedAt,
       accessToken: session?.access_token ?? null,
       signIn,

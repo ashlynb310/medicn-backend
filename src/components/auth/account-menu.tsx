@@ -8,6 +8,7 @@ import {
   LogOut,
   MessagesSquare,
   Shield,
+  Wallet,
   ShieldCheck,
   User,
 } from "lucide-react";
@@ -101,6 +102,12 @@ export default function AccountMenu() {
           <LayoutDashboard aria-hidden="true" />
           {isHost ? "Host dashboard" : "Become a host"}
         </DropdownMenuItem>
+        {isHost && (
+          <DropdownMenuItem onClick={() => router.push("/host/payouts")}>
+            <Wallet aria-hidden="true" />
+            Payouts
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={() => router.push("/account")}>
           <User aria-hidden="true" />
           Profile

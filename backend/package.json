@@ -1,0 +1,61 @@
+{
+  "name": "medicn",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "npm@11.17.0",
+  "engines": {
+    "node": ">=24.16.0 <25",
+    "npm": ">=11.17.0 <12"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:api": "npm run dev -w apps/api",
+    "build": "npm run build:types && npm run build:api",
+    "build:api": "npm run build -w apps/api",
+    "build:types": "npm run build -w packages/types",
+    "start:api:prod": "node apps/api/dist/main.js",
+    "worker:outbox:prod": "node apps/api/dist/jobs/outbox.worker.js",
+    "worker:all:prod": "node apps/api/dist/workers/downstream-worker.supervisor.js",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "db:up": "docker compose up -d db redis",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f db",
+    "redis:logs": "docker compose logs -f redis",
+    "worker:email": "npm run worker:email -w apps/api",
+    "worker:outbox": "npm run worker:outbox -w apps/api",
+    "worker:media": "npm run worker:media -w apps/api",
+    "worker:maps": "npm run worker:maps -w apps/api",
+    "worker:operations": "npm run worker:operations -w apps/api",
+    "jobs:recover": "npm run jobs:recover -w apps/api",
+    "jobs:requeue": "npm run jobs:requeue -w apps/api --",
+    "payments:reconcile": "npm run payments:reconcile -w apps/api --",
+    "host-transfers:reconcile": "npm run host-transfers:reconcile -w apps/api --",
+    "email:webhook-retry": "npm run email:webhook-retry -w apps/api --",
+    "maps:retry": "npm run maps:retry -w apps/api --",
+    "maps:refresh": "npm run maps:refresh -w apps/api --",
+    "smoke:email": "npm run smoke:email -w apps/api",
+    "admin:grant": "npm run admin:grant -w apps/api --",
+    "openapi:generate": "npm run openapi:generate -w apps/api",
+    "openapi:check": "npm run openapi:check -w apps/api",
+    "query-plans:audit": "npm run query-plans:audit -w apps/api",
+    "smoke:http": "npm run smoke:http -w apps/api",
+    "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "class-validator": "^0.15.1",
+    "dotenv": "17.4.2",
+    "prisma": "7.8.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.61.1"
+  }
+}

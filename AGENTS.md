@@ -16,12 +16,11 @@ Week 1 and Week 2 documents describe the project foundation. Week 3 auth work an
 
 ## Tech Stack
 
-- Frontend: Next.js, TypeScript, Tailwind CSS, Supabase Auth
 - Backend: NestJS, TypeScript, Prisma, PostgreSQL, Supabase Auth token verification
-- Monorepo layout:
-  - `apps/web` for the Next.js frontend
+- Repository layout:
   - `apps/api` for the NestJS backend
-  - `packages/types` for shared frontend/backend contracts
+  - `packages/types` for API and domain contracts
+- The formal Next.js frontend is maintained in a separate repository.
 
 ## Agent Skills Requirement
 
@@ -157,9 +156,8 @@ integration roadmap.**
 
 Week 6 introduces integration infrastructure for the formal MediCN website. The
 official frontend is being developed separately and has not been merged into this
-repo yet; the current `apps/web` frontend is only a temporary local test surface.
-Use it for smoke testing API behavior when helpful, but do not mark a feature as
-fully frontend-integrated until the official frontend flow is merged and tested.
+repo. Use an API client for backend smoke testing, but do not mark a feature as
+fully frontend-integrated until the official frontend flow is tested against it.
 
 ### Backend & Database
 
@@ -312,9 +310,8 @@ Nearby-place enrichment:
     refund, and dispute events.
   - Persist `Payment` records using the existing Week 2 schema fields and keep
     errors inside the shared API envelope.
-- The temporary frontend or an API client may be used to call endpoints and
-  confirm happy/error paths while the official frontend is unmerged, but they are
-  not a substitute for formal frontend integration.
+- An API client may be used to call endpoints and confirm happy/error paths, but
+  it is not a substitute for formal frontend integration.
 
 Frontend-dependent or deferred:
 
@@ -337,9 +334,8 @@ Suggested implementation order:
    booking records.
 5. Build and test the Stripe checkout/webhook prep around backend-calculated
    amounts and existing `Payment` schema.
-6. Smoke-test with the temporary frontend, API client, or worker smoke command,
-   then document what is ready for the official frontend merge and what still
-   needs formal UI wiring.
+6. Smoke-test with an API client or worker smoke command, then document what is
+   ready for formal frontend integration and what still needs UI wiring.
 
 Week 6 is not complete just because third-party SDKs are installed. It is
 complete when backend contracts, safety boundaries, tests, environment docs, and

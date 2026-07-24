@@ -32,7 +32,6 @@ npm install --global npm@11.17.0
 This installs dependencies for:
 
 - `apps/api`: NestJS backend
-- `apps/web`: minimal Next.js auth shell
 - `packages/types`: shared TypeScript contracts
 
 Key project package versions:
@@ -40,15 +39,11 @@ Key project package versions:
 | Package | Version |
 | --- | --- |
 | NestJS | 11.1.x (`@nestjs/platform-express` patched to 11.1.28) |
-| Next.js | 16.2.9 |
-| React / React DOM | 19.2.7 |
 | Prisma / `@prisma/client` | 7.8.0 |
 | TypeScript | 6.0.3 |
 | ESLint | 10.5.0 |
 | Jest | 30.4.2 |
-| Tailwind CSS | 4.3.1 |
 | Supabase JavaScript SDK | 2.108.2 |
-| Supabase SSR helpers | 0.12.0 |
 
 ## 2. Create Local Environment File
 

@@ -14,11 +14,9 @@
   "scripts": {
     "dev": "npm run dev --workspaces --if-present",
     "dev:api": "npm run dev -w apps/api",
-    "dev:web": "npm run dev -w apps/web",
-    "build": "npm run build:types && npm run build:api && npm run build:web",
+    "build": "npm run build:types && npm run build:api",
     "build:api": "npm run build -w apps/api",
     "build:types": "npm run build -w packages/types",
-    "build:web": "npm run build -w apps/web",
     "start:api:prod": "node apps/api/dist/main.js",
     "worker:outbox:prod": "node apps/api/dist/jobs/outbox.worker.js",
     "worker:all:prod": "node apps/api/dist/workers/downstream-worker.supervisor.js",

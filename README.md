@@ -5,11 +5,12 @@ MediCN is a marketplace MVP for healthcare-affiliated housing workflows.
 ## Workspace
 
 - `apps/api`: NestJS API
-- `apps/web`: Minimal Next.js frontend for auth integration testing
 - `packages/types`: Shared API and domain contracts
 - `prisma/schema.prisma`: PostgreSQL schema managed by Prisma
 - `docs/backend-database-setup.md`: Backend and database setup guide
 - `docs/decisions`: Architecture decision records
+
+The formal MediCN frontend is maintained in a separate repository.
 
 ## Required Versions
 
